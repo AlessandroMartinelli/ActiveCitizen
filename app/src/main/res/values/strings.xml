@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Active citizen</string>
+    <string name="report_an_issue_window_title"><u>Report an issue</u></string>
+    <string name="coordinates_retrieval_instruction">Use the current coordinates or choose them manually</string>
+</resources>
