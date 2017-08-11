@@ -36,7 +36,6 @@ import java.io.InputStream;
 
 import static android.R.attr.bitmap;
 
-
 /**
  * Created by Alessandro on 04/08/2017.
  */
@@ -57,8 +56,8 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     private static Dialog builtDialog;
     private static String detailsDialogContent;
 
-    private LatLng backupLatLng;
-    private Bitmap backupImageBitmap;
+    private LatLng latLng;
+    private Bitmap imageBitmap;
 
     private TextView currentLocation;
     private EditText reportTitle;
@@ -86,9 +85,16 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         return coordinates;
     }
 
-    public void showToast(String message){
-        Toast toast = Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT);
-        toast.show();
+    public LatLng LatLngFromLocation(Location location){
+        return new LatLng(location.getLatitude(), location.getLongitude());
+    }
+
+    public void showShortToast(String message){
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+    }
+
+    public void showLongToast(String message){
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
 
     protected void initializeLocationProvider(){
@@ -145,7 +151,24 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
 
     @Override public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putExtra("BitmapImage", bitmap);
+        outState.putParcelable("bitmap", imageBitmap);
+        outState.putParcelable("coordinates", latLng);
+    }
+
+    @Override public void onRestoreInstanceState(Bundle savedInstanceState){
+        super.onRestoreInstanceState(savedInstanceState);
+
+        imageBitmap = savedInstanceState.getParcelable("bitmap");
+        if(imageBitmap != null) {
+            photoPreview.setImageBitmap(imageBitmap);
+        } else {
+            photoPreview.setImageResource(android.R.drawable.gallery_thumb);
+        }
+
+        latLng = savedInstanceState.getParcelable("coordinates");
+        if(latLng != null) {
+            currentLocation.setText(stringFromLatLng(latLng));
+        }
     }
 
     @Override
@@ -163,6 +186,38 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         }
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
+            // Result returned from the capture photo app
+            Bundle extras = data.getExtras();
+            imageBitmap = (Bitmap) extras.get("data");
+            photoPreview.setImageBitmap(imageBitmap);
+            buttonAddPhoto.setText("change photo");
+
+        } else if (requestCode == PICK_PHOTO && resultCode == Activity.RESULT_OK) {
+            // Result returned from the pick photo from gallery app
+            if (data == null) {
+                showLongToast("An error occurred while retrieving the image");
+                return;
+            }
+            try {
+                InputStream inputStream = getApplicationContext().getContentResolver().openInputStream(data.getData());
+                imageBitmap = BitmapFactory.decodeStream(inputStream);
+                photoPreview.setImageBitmap(imageBitmap);
+                buttonAddPhoto.setText("change photo");
+            } catch(Exception e){
+                showLongToast("An error occurred while retrieving the image");
+                System.out.println("[DEBUG] exception: " + e.getMessage());
+            }
+        } else if(requestCode == REQUEST_MANUALLY_CHOOSE_COORDINATES && resultCode == RESULT_OK) {
+            // Result returned from the application used for let the user choose coordinates
+            Bundle extras = data.getExtras();
+            latLng = (LatLng) extras.get("coordinates");
+            currentLocation.setText(stringFromLatLng(latLng));
+        }
+    }
+
     public void obtainCurrentCoordinates(View view) {
         if (locationProvider == null) {
             currentLocation.setText("unable to detect your location");
@@ -172,12 +227,14 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         } else {
             locationManager.requestSingleUpdate(locationProvider, this, null);
             currentLocation.setText("...detecting...");
+            latLng = null;
         }
     }
 
     @Override
     public void onLocationChanged(Location location){
         currentLocation.setText(stringFromLocation(location));
+        latLng = LatLngFromLocation(location);
     }
 
     protected void manuallySelectCoordinates(View v) {
@@ -185,7 +242,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         if(manualCoordinatesIntent.resolveActivity(getPackageManager()) != null) {
             startActivityForResult(manualCoordinatesIntent, REQUEST_MANUALLY_CHOOSE_COORDINATES);
         } else {
-            showToast("No such application is available on your device");
+            showShortToast("No such application is available on your device");
         }
     }
 
@@ -218,7 +275,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                 .show();
     }
 
-    public void showImageDialog(View v) {
+    public void pickImageDialog(View v) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
         builder.setTitle("Choose an image from")
@@ -247,7 +304,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
             startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
         } else {
-            showToast("No such application is available on your device");
+            showShortToast("No such application is available on your device");
         }
     }
 
@@ -257,39 +314,13 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         startActivityForResult(intent, PICK_PHOTO);
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
-            photoPreview.setImageBitmap(imageBitmap);
-            buttonAddPhoto.setText("change photo");
-        } else if(requestCode == REQUEST_MANUALLY_CHOOSE_COORDINATES && resultCode == RESULT_OK) {
-            Bundle extras = data.getExtras();
-            LatLng manuallySelectedCoordinates = (LatLng) extras.get("coordinates");
-            currentLocation.setText(stringFromLatLng(manuallySelectedCoordinates));
-        } else if (requestCode == PICK_PHOTO && resultCode == Activity.RESULT_OK) {
-            if (data == null) {
-                //Display an error
-                return;
-            }
-            try {
-                InputStream inputStream = getApplicationContext().getContentResolver().openInputStream(data.getData());
-                Bitmap imageBitmap = BitmapFactory.decodeStream(inputStream);
-                photoPreview.setImageBitmap(imageBitmap);
-                buttonAddPhoto.setText("change photo");
-                //Now you can do whatever you want with your inpustream, save it as file, upload to a server, decode a bitmap...
-            } catch(Exception e){
-                System.out.println("[DEBUG] exception: " + e.getMessage());
-            }
-        }
-    }
-
     public void resetReport(View v){
         currentLocation.setText(R.string.coordinates_retrieval_instruction);
         reportTitle.setText("");
         reportDetails.setText("");
         photoPreview.setImageResource(android.R.drawable.gallery_thumb);
+        imageBitmap = null;
+        latLng = null;
         buttonAddPhoto.setText("take a photo");
         rating.setRating(0);
     }
@@ -312,6 +343,20 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         //LoginDialogFragment ldf = new LoginDialogFragment();
         //ldf.onCreateDialog(null);
     }
+
+    /*
+    @Override
+    public void onBackPressed(){
+        if(backButtonPressed == 0){
+            showLongToast("Press back again to exit. Inserted data will be lost");
+            backButtonPressed = 1;
+        } else {
+            // Reset the backButtonPressed flag
+            backButtonPressed = 0;
+            super.onBackPressed();
+        }
+    }
+    */
 
     @Override
     public void onProviderDisabled(String provider){ }

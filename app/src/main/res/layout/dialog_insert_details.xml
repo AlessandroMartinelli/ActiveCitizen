@@ -13,7 +13,6 @@
         android:layout_height="wrap_content"
         android:background="@android:color/white"
         android:inputType="textMultiLine"
-        android:windowSoftInputMode="stateVisible"
         android:hint="insert details, max 500 characters"
         android:maxLength="500" />
 </RelativeLayout>
