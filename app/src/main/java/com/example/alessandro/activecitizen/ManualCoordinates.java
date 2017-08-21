@@ -8,9 +8,14 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
@@ -18,6 +23,10 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import static android.R.id.message;
 import static java.util.concurrent.ThreadLocalRandom.current;
 
 /**
@@ -31,11 +40,6 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
     private LatLng manuallySelectedCoordinates;
     private LatLng currentCoordinates;
     private String provider;
-
-    public void showToast(String message){
-        Toast toast = Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT);
-        toast.show();
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
@@ -56,9 +60,7 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
             locationManager.requestSingleUpdate(provider, this, null);
             System.out.println("[DEBUG] richiesta al " + " fatta");
         }
-
         System.out.println("[DEBUG]: ho appena chiesto la mappa");
-
     }
 
     @Override
@@ -77,7 +79,8 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
         gmap = googleMap;
         gmap.setOnMapClickListener(this);
         centerMap(null);
-        showToast("Wait a few seconds for the map to be centered to your location...");
+        String message = "Wait a few seconds for the map to be centered to your location...";
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -89,6 +92,7 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
         markerOptions.position(manuallySelectedCoordinates);
         gmap.addMarker(markerOptions);
 
+        // TODO: remove this, since it is only for debugging purpose
         String coordinates = new String();
         coordinates = coordinates
                 .concat(String.valueOf(manuallySelectedCoordinates.latitude))
@@ -109,6 +113,8 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
 
     public void ok(View v){
         if(manuallySelectedCoordinates == null){
+            String message = "You must first select a location";
+            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
             // toast che dice che non hai selezionato alcun punto sulla mappa
             // e che puoi premere indietro per tornare all'attivita' precedente
         } else {
@@ -118,6 +124,50 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
             finish();
         }
     }
+
+    /*
+    public void get_report_index(View v) {
+        System.out.println("[DEBUG] inside the get_report_index");
+        StringRequest postRequest = new StringRequest(Request.Method.POST, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        // response
+                        System.out.println("[DEBUG] get_report_index response is " + response);
+                        if(response.equals("0")){
+                            String message = "No report to retrieve";
+                            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                            if(loadingDialog != null && loadingDialog.isShowing()){
+                                loadingDialog.dismiss();
+                            }
+                        } else {
+                            String message = "Reports retrieved successfully";
+                            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                            if(loadingDialog != null && loadingDialog.isShowing()){
+                                loadingDialog.dismiss();
+                            }
+                            //finish();
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // error
+                        Log.d("[DEBUG] Error.Response", error.toString());
+                    }
+                }
+        ) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String>  params = new HashMap<String, String>();
+                params.put("action", "get_report_index");
+                return params;
+            }
+        };
+        queue.add(postRequest);
+    }
+    */
 
     @Override
     public void onProviderDisabled(String provider){ }

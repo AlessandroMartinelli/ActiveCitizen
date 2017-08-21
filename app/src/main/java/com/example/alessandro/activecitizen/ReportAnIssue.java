@@ -1,8 +1,7 @@
 package com.example.alessandro.activecitizen;
 
 import android.app.Activity;
-import android.app.Dialog;
-import android.content.Context;
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -15,12 +14,12 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Base64;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -28,13 +27,20 @@ import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.maps.model.LatLng;
 
 import android.Manifest;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-
-import static android.R.attr.bitmap;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by Alessandro on 04/08/2017.
@@ -47,17 +53,21 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     static final int LOCATION_PERMISSION = 3;
     static final int PICK_PHOTO = 4;
 
+    private int userId;
+    Intent startingIntent;
+
     private LocationManager locationManager;
     private Criteria criteria;
     private String locationProvider;
-    private AlertDialog.Builder alertDialog;
-    private static DialogFragment detailsDialogFragment;
-    private static DialogFragment imageDialogFragment;
-    private static Dialog builtDialog;
     private static String detailsDialogContent;
+    private ProgressDialog loadingDialog;
+
+    private RequestQueue queue;
+    private String url;
 
     private LatLng latLng;
     private Bitmap imageBitmap;
+    private String imageString;
 
     private TextView currentLocation;
     private EditText reportTitle;
@@ -65,7 +75,15 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     private EditText dialogDetails;
     private ImageView photoPreview;
     private Button buttonAddPhoto;
-    private RatingBar rating;
+    private RatingBar ratingBar;
+
+    public String BitMapToString(Bitmap bitmap){
+        ByteArrayOutputStream baos=new  ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG,100, baos);
+        byte [] b=baos.toByteArray();
+        String temp= Base64.encodeToString(b, Base64.DEFAULT);
+        return temp;
+    }
 
     public String stringFromLatLng(LatLng latLng) {
         String coordinates = new String();
@@ -89,13 +107,13 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         return new LatLng(location.getLatitude(), location.getLongitude());
     }
 
-    public void showShortToast(String message){
-        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
-    }
+    //public void showShortToast(String message){
+    //    Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+    //}
 
-    public void showLongToast(String message){
-        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
-    }
+    //public void showLongToast(String message){
+    //    Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+    //}
 
     protected void initializeLocationProvider(){
         criteria.setAccuracy(Criteria.ACCURACY_FINE);
@@ -109,12 +127,23 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_report_an_issue);
 
+        queue = Volley.newRequestQueue(this);
+        url = "http://www.activecitizen.altervista.org";
+
         currentLocation = (TextView) findViewById(R.id.textView_currentLocation);
         reportTitle = (EditText) findViewById(R.id.editText_insertTitle);
         reportDetails = (EditText) findViewById(R.id.editText_details);
         photoPreview = (ImageView) findViewById(R.id.imageView_photoPreview);
         buttonAddPhoto = (Button) findViewById(R.id.button_addPhoto);
-        rating = (RatingBar) findViewById(R.id.ratingBar_priority);
+        ratingBar = (RatingBar) findViewById(R.id.ratingBar_priority);
+
+        startingIntent = getIntent();
+        userId = startingIntent.getIntExtra("user_id", 0);
+        if(userId == 0){
+            Toast.makeText(getApplicationContext(), "Account error", Toast.LENGTH_LONG).show();
+            finish();
+        }
+        System.out.println("[DEBUG] onCreate() userId retrieved from intent is " + userId);
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         criteria = new Criteria();
@@ -153,10 +182,12 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         super.onSaveInstanceState(outState);
         outState.putParcelable("bitmap", imageBitmap);
         outState.putParcelable("coordinates", latLng);
+        outState.putInt("user_id", userId);
     }
 
     @Override public void onRestoreInstanceState(Bundle savedInstanceState){
         super.onRestoreInstanceState(savedInstanceState);
+        System.out.println("[DEBUG] after default onRestore(), userId is " + userId);
 
         imageBitmap = savedInstanceState.getParcelable("bitmap");
         if(imageBitmap != null) {
@@ -169,6 +200,10 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         if(latLng != null) {
             currentLocation.setText(stringFromLatLng(latLng));
         }
+
+        userId = savedInstanceState.getInt("user_id", 0) != 0?
+                savedInstanceState.getInt("user_id", 0) : userId;
+        System.out.println("[DEBUG] after complete onRestore(), userId is " + userId);
     }
 
     @Override
@@ -194,24 +229,41 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
             imageBitmap = (Bitmap) extras.get("data");
             photoPreview.setImageBitmap(imageBitmap);
             buttonAddPhoto.setText("change photo");
-
+            imageString = BitMapToString(imageBitmap);
         } else if (requestCode == PICK_PHOTO && resultCode == Activity.RESULT_OK) {
             // Result returned from the pick photo from gallery app
             if (data == null) {
-                showLongToast("An error occurred while retrieving the image");
+                String message = "An error occurred while retrieving the image";
+                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
                 return;
             }
             try {
+                // The image is retrieved
                 InputStream inputStream = getApplicationContext().getContentResolver().openInputStream(data.getData());
                 imageBitmap = BitmapFactory.decodeStream(inputStream);
+
+                // The image is compressed
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                imageBitmap.compress(Bitmap.CompressFormat.JPEG, 10, outputStream);
+
+                // The imageString String, to be used in the send, is initialized
+                byte [] b=outputStream.toByteArray();
+                imageString= Base64.encodeToString(b, Base64.DEFAULT);
+
+                // The compressed image is retrieved
+                byte[] bitmapdata = outputStream.toByteArray();
+                imageBitmap = BitmapFactory.decodeByteArray(bitmapdata, 0, bitmapdata.length);
+
                 photoPreview.setImageBitmap(imageBitmap);
                 buttonAddPhoto.setText("change photo");
             } catch(Exception e){
-                showLongToast("An error occurred while retrieving the image");
+                String message = "An error occurred while retrieving the image";
+                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
                 System.out.println("[DEBUG] exception: " + e.getMessage());
             }
         } else if(requestCode == REQUEST_MANUALLY_CHOOSE_COORDINATES && resultCode == RESULT_OK) {
             // Result returned from the application used for let the user choose coordinates
+            locationManager.removeUpdates(this); // forse andrebbe in onStop?
             Bundle extras = data.getExtras();
             latLng = (LatLng) extras.get("coordinates");
             currentLocation.setText(stringFromLatLng(latLng));
@@ -242,7 +294,8 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         if(manualCoordinatesIntent.resolveActivity(getPackageManager()) != null) {
             startActivityForResult(manualCoordinatesIntent, REQUEST_MANUALLY_CHOOSE_COORDINATES);
         } else {
-            showShortToast("No such application is available on your device");
+            String message = "No such application is available on your device";
+            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -268,7 +321,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                     @Override
                     public void onClick(DialogInterface dialog, int id) {
                         System.out.println("[DEBUG] negative button pressed");
-                        //dialog.cancel();
+                        dialog.cancel();
                     }
                 })
                 .setCancelable(false)
@@ -304,7 +357,8 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
             startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
         } else {
-            showShortToast("No such application is available on your device");
+            String message = "No such application is available on your device";
+            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -322,15 +376,42 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         imageBitmap = null;
         latLng = null;
         buttonAddPhoto.setText("take a photo");
-        rating.setRating(0);
+        ratingBar.setRating(0);
     }
 
-    public void sendReport(View v){
+    public void sendReport(View v) {
         System.out.println("[DEBUG] title is " + reportTitle.getText().toString());
-
-        if(reportTitle.getText().toString().equals("")) {
-
+        // per prima cosa si dovrà controllare che tutte le variabili non siano nulle
+        // poi la conversione dell'immagine a stringa la farei qui, così da tenere la send
+        // quanto più possibile leggera.
+        // Dopo aver chiamato la login bisogna anche mostrare il dialogo di caricamento.
+        if(latLng == null){
+            Toast.makeText(getApplicationContext(), "You must insert the coordinates", Toast.LENGTH_LONG).show();
+            return;
+        } else if (reportTitle.getText().toString().isEmpty()) {
+            Toast.makeText(getApplicationContext(), "You must insert a title", Toast.LENGTH_LONG).show();
+            return;
+        } else if (reportDetails.getText().toString().isEmpty()){
+            Toast.makeText(getApplicationContext(), "You must insert a description", Toast.LENGTH_LONG).show();
+            return;
+        } else if (imageBitmap == null){
+            Toast.makeText(getApplicationContext(), "You must pick an image", Toast.LENGTH_LONG).show();
+            return;
+        } else if (ratingBar.getRating() == 0){
+            Toast.makeText(getApplicationContext(), "You must rate the issue (0 is not accepted)", Toast.LENGTH_LONG).show();
+            return;
         }
+
+        loadingDialog = ProgressDialog.show(this, "", "Please wait...", true);
+
+        String userIdString = "" + userId;
+        String lat = "" + latLng.latitude;
+        String lng = "" + latLng.longitude;
+        String ratingString = "" + ratingBar.getRating();
+        send(userIdString, lat, lng, reportTitle.getText().toString(),
+                reportDetails.getText().toString(), imageString, ratingString);
+
+
 
         /*
          *  TODO: per evitare ri-utilizzi della stessa immagine,
@@ -339,10 +420,58 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
          *  memorizza l'immagine.
          *
          */
-
-        //LoginDialogFragment ldf = new LoginDialogFragment();
-        //ldf.onCreateDialog(null);
     }
+
+    private int send(final String userIdString, final String lat, final String lng,
+                     final String title, final String description, final String imageString,
+                     final String ratingString) {
+            StringRequest postRequest = new StringRequest(Request.Method.POST, url,
+                    new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            // response
+                            Log.d("[DEBUG] Response", response);
+                            if(response.equals("0")){
+                                String message = "An error occurred while sending the report";
+                                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                                if(loadingDialog != null && loadingDialog.isShowing()){
+                                    loadingDialog.dismiss();
+                                }
+                            } else {
+                                String message = "Report sent successfully";
+                                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                                if(loadingDialog != null && loadingDialog.isShowing()){
+                                    loadingDialog.dismiss();
+                                }
+                                finish();
+                            }
+                        }
+                    },
+                    new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            // error
+                            Log.d("[DEBUG] Error.Response", error.toString());
+                        }
+                    }
+            ) {
+                @Override
+                protected Map<String, String> getParams() {
+                    Map<String, String>  params = new HashMap<String, String>();
+                    params.put("action", "send_report");
+                    params.put("author_id", userIdString);
+                    params.put("latitude", lat);
+                    params.put("longitude", lng);
+                    params.put("title", title);
+                    params.put("description", description);
+                    params.put("image", imageString);
+                    params.put("rating", ratingString);
+                    return params;
+                }
+            };
+            queue.add(postRequest);
+            return 0;
+        }
 
     /*
     @Override

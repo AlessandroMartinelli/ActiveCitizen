@@ -11,21 +11,10 @@
         android:paddingRight="@dimen/activity_horizontal_margin"
         android:paddingTop="@dimen/activity_small_vertical_margin">
         <TextView
-            android:id="@+id/textView_windowTitle"
-            android:layout_alignParentTop="true"
-            android:layout_centerHorizontal="true"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
-            android:textSize="@dimen/title_size"
-            android:textColor="@color/colorPrimary"
-            android:text="@string/report_an_issue_window_title" />
-        <TextView
             android:id="@+id/textView_location"
             android:layout_alignParentLeft="true"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/textView_windowTitle"
             android:layout_marginRight="@dimen/activity_intraelement_horizontal_margin"
             android:textSize="@dimen/normal_text_size"
             android:text="Coordinates" />
@@ -33,7 +22,6 @@
             android:id="@+id/textView_currentLocation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/textView_windowTitle"
             android:layout_toRightOf="@id/textView_location"
             android:background="@android:color/white"
             android:lines="2"
@@ -64,7 +52,6 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/button_currentLocation"
             android:layout_alignParentLeft="true"
-            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:layout_marginRight="@dimen/activity_intraelement_horizontal_margin"
             android:textSize="@dimen/normal_text_size"
             android:text="Title" />
@@ -75,6 +62,7 @@
             android:layout_below="@+id/button_currentLocation"
             android:layout_toRightOf="@+id/textView_title"
             android:layout_alignLeft="@+id/textView_currentLocation"
+            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:background="@android:color/white"
             android:inputType="textMultiLine"
             android:hint="insert title, max 50 chars"
@@ -83,16 +71,15 @@
             android:id="@+id/textView_details"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/textView_title"
+            android:layout_below="@+id/editText_insertTitle"
             android:layout_alignParentLeft="true"
-            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:textSize="@dimen/normal_text_size"
             android:text="Details" />
         <EditText
             android:id="@+id/editText_details"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/textView_title"
+            android:layout_below="@+id/editText_insertTitle"
             android:layout_toRightOf="@+id/textView_details"
             android:layout_alignLeft="@+id/textView_currentLocation"
             android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
@@ -104,7 +91,7 @@
             android:id="@+id/textView_photo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/textView_details"
+            android:layout_below="@+id/editText_details"
             android:layout_alignParentLeft="true"
             android:layout_marginRight="@dimen/activity_intraelement_horizontal_margin"
             android:textSize="@dimen/normal_text_size"
@@ -124,7 +111,7 @@
             android:layout_width="140dp"
             android:layout_height="wrap_content"
             android:layout_below="@id/imageView_photoPreview"
-            android:layout_alignLeft="@+id/textView_windowTitle"
+            android:layout_alignLeft="@+id/textView_currentLocation"
             android:layout_marginLeft="59dp"
             android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:text="take a photo"
@@ -144,7 +131,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/button_addPhoto"
-            android:layout_alignLeft="@+id/textView_windowTitle"
+            android:layout_alignLeft="@+id/textView_currentLocation"
             android:layout_marginLeft="11dp"
             android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:numStars="5" />
@@ -163,7 +150,8 @@
             android:layout_below="@+id/ratingBar_priority"
             android:layout_centerHorizontal="true"
             android:backgroundTint="@color/positiveAnswer"
-            android:text="Send" />
+            android:text="Send"
+            android:onClick="sendReport"/>
         <Button
             android:id="@+id/buttonSave"
             android:layout_width="wrap_content"
@@ -171,7 +159,8 @@
             android:layout_below="@+id/ratingBar_priority"
             android:layout_alignRight="@+id/editText_details"
             android:backgroundTint="@color/saveAnswer"
-            android:text="Save" />
+            android:text="Save"
+            android:onClick="get_report_index"/>
     </RelativeLayout>
 </ScrollView>
 
