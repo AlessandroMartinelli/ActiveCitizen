@@ -64,6 +64,7 @@
             android:layout_alignLeft="@+id/textView_currentLocation"
             android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:background="@android:color/white"
+            android:digits="0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghilmnopqrstuvwxyz ?!.,:;_-'"
             android:inputType="textMultiLine"
             android:hint="insert title, max 50 chars"
             android:maxLength="50" />
@@ -84,6 +85,7 @@
             android:layout_alignLeft="@+id/textView_currentLocation"
             android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:background="@android:color/white"
+            android:digits="0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghilmnopqrstuvwxyz ?!.,:;_-'"
             android:inputType="textMultiLine"
             android:hint="insert details, max 500 chars"
             android:maxLength="500" />

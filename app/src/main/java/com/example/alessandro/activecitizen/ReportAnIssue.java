@@ -408,6 +408,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         String lat = "" + latLng.latitude;
         String lng = "" + latLng.longitude;
         String ratingString = "" + ratingBar.getRating();
+        System.out.println("[DEBUG] valore di ratingString: " + ratingString);
         send(userIdString, lat, lng, reportTitle.getText().toString(),
                 reportDetails.getText().toString(), imageString, ratingString);
 

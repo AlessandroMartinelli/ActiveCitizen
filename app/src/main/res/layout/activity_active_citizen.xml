@@ -43,5 +43,6 @@
         android:layout_alignRight="@+id/buttonReviewPastIssues"
         android:layout_below="@+id/buttonReviewPastIssues"
         android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
-        android:text="Browse map" />
+        android:text="Browse map"
+        android:onClick="launchBrowseMap"/>
 </RelativeLayout>

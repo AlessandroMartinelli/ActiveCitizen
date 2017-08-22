@@ -1,7 +1,9 @@
 package com.example.alessandro.activecitizen;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
@@ -10,24 +12,33 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.Request;
+import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.GoogleMap.OnInfoWindowClickListener;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import static android.R.id.message;
-import static java.util.concurrent.ThreadLocalRandom.current;
+import static com.example.alessandro.activecitizen.R.id.username;
+import static java.lang.Integer.parseInt;
 
 /**
  * Created by Alessandro on 06/08/2017.
@@ -40,33 +51,163 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
     private LatLng manuallySelectedCoordinates;
     private LatLng currentCoordinates;
     private String provider;
+    private Criteria criteria;
+
+    private LinearLayout ll_confirm;
+    private LinearLayout ll_button;
+
+    private boolean manually_select_coordinates;
+
+    private int userId;
+    private RequestQueue queue;
+    private String url;
+    private ProgressDialog loadingDialog;
+    private ReportList reportList;
+
+    protected void retrieveReportDetails(Report r){
+        final int reportId = r.reportId;
+        StringRequest postRequest = new StringRequest(Request.Method.POST, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        if (response.equals("0")) {
+
+                        } else {
+                            response = response.substring(1, (response.length() - 1));
+
+
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                    }
+                })
+        {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String>  params = new HashMap<String, String>();
+                params.put("action", "get_report_details");
+                params.put("report_id", "" + reportId);
+                return params;
+            }
+        };
+    }
+
+
+    private class ReportList{
+        protected ArrayList<Report> reportList;
+
+        public ReportList(){
+            reportList = new ArrayList<Report>();
+        }
+
+        public void addReport(Report report){
+            System.out.println("[DEBUG] sono dentro la addReport, report vale " + report.toString());
+            if(report == null){
+                System.out.println("[DEBUG] report e' null, quindi non chiamo la add di ArrayList");
+            } else {
+                System.out.println("[DEBUG] reportList vale null? " + (reportList == null? "yep" : "nope"));
+                reportList.add(report);
+            }
+        }
+
+        public void printFirst(){
+            System.out.println("[DEBUG] sono dentro la printFirst");
+            Report r = reportList.get(0);
+            if(r == null){
+                System.out.println("[DEBUG] report in printFirst() e' null, quindi non chiamo la print");
+            }
+            System.out.println("[DEBUG] Object #0 is: " +
+                    "username " + r.username + ", " +
+                    "authorId " + r.authorId + ", " +
+                    "reportId " + r.reportId + ", " +
+                    "reportTitle " + r.reportTitle + ", " +
+                    "coordinates " + r.coordinates.latitude + ", " + r.coordinates.longitude);
+        }
+    }
+
+    private class Report{
+        protected String username;
+        protected int authorId;
+        protected int reportId;
+        protected String reportTitle;
+        protected LatLng coordinates;
+        protected Float avgRating;
+        protected String reportDescription;
+        protected Bitmap reportImage;
+
+        public Report(String username, int authorId, int reportId, String reportTitle,
+                           LatLng coordinates, Float avgRating){
+            this.username = username;
+            this.authorId = authorId;
+            this.reportId = reportId;
+            this.reportTitle = reportTitle;
+            this.coordinates = coordinates;
+            this.avgRating = avgRating;
+        }
+
+        public String toString(){
+            String s = "username " + username + "\n" +
+                    "authorId " + authorId + "\n" +
+                    "reportId " + reportId + "\n" +
+                    "reportTitle " + reportTitle + "\n" +
+                    "coordinates " + coordinates.latitude + ", " + coordinates.longitude + "\n" +
+                    "avgRating " + avgRating;
+            return s;
+        }
+
+        // a report.show() method would be useful in order to show a popup
+        // with all information abount this report.
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_manual_coordinates);
 
-        ((MapFragment) getFragmentManager().findFragmentById(R.id.coordinates_map)).
-                getMapAsync(this);
-
-        locationManager = (LocationManager)getSystemService(LOCATION_SERVICE);
-        Criteria criteria = new Criteria();
-        criteria.setAccuracy(Criteria.ACCURACY_FINE);
-        provider = locationManager.getBestProvider(criteria, true);
-        if(provider.isEmpty()){
-            System.out.println("[DEBUG] nessun provider trovato");
-        } else {
-            System.out.println("[DEBUG]  provider trovato: " + provider);
-            locationManager.requestSingleUpdate(provider, this, null);
-            System.out.println("[DEBUG] richiesta al " + " fatta");
+        Intent startingIntent = getIntent();
+        userId = startingIntent.getIntExtra("user_id", 0);
+        if(userId == 0){
+            Toast.makeText(getApplicationContext(), "Account error", Toast.LENGTH_LONG).show();
+            finish();
         }
-        System.out.println("[DEBUG]: ho appena chiesto la mappa");
+
+        if(getCallingActivity() == null){
+            // The activity was started through "browse map"
+            manually_select_coordinates = false;
+            setContentView(R.layout.activity_manual_coordinates);
+            queue = Volley.newRequestQueue(this);
+            url = "http://www.activecitizen.altervista.org";
+            reportList = new ReportList();
+            get_report_index();
+        } else {
+            // The activity was started through "manually select coordinates"
+            manually_select_coordinates = true;
+            setContentView(R.layout.activity_manual_coordinates);
+            ll_confirm = (LinearLayout) findViewById(R.id.linearLayout_confirm);
+            ll_button = (LinearLayout) findViewById(R.id.linearLayout_button);
+        }
+
+        if(savedInstanceState == null){
+            // The activity has been started, this is not a rotation
+            ((MapFragment) getFragmentManager().findFragmentById(R.id.coordinates_map)).
+                    getMapAsync(this);
+            locationManager = (LocationManager)getSystemService(LOCATION_SERVICE);
+            criteria = new Criteria();
+            criteria.setAccuracy(Criteria.ACCURACY_FINE);
+            provider = locationManager.getBestProvider(criteria, true);
+            if(provider.isEmpty()){
+            } else {
+                locationManager.requestSingleUpdate(provider, this, null);
+            }
+        }
+
     }
 
     @Override
     public void onLocationChanged(Location location){
         System.out.println("[DEBUG] onLocationChanged inizia qua");
-        //currentCoordinates.latitude = location.getLatitude();
         currentCoordinates = new LatLng (location.getLatitude(), location.getLongitude());
         if(gmap != null) {
             gmap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentCoordinates, 15));
@@ -75,11 +216,12 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        System.out.println("[DEBUG]: ecco la mappa!");
         gmap = googleMap;
-        gmap.setOnMapClickListener(this);
+        if(manually_select_coordinates == true) {
+            gmap.setOnMapClickListener(this);
+        }
         centerMap(null);
-        String message = "Wait a few seconds for the map to be centered to your location...";
+        String message = "Wait a few seconds for the map to be centered...";
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
 
@@ -92,31 +234,24 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
         markerOptions.position(manuallySelectedCoordinates);
         gmap.addMarker(markerOptions);
 
-        // TODO: remove this, since it is only for debugging purpose
-        String coordinates = new String();
-        coordinates = coordinates
-                .concat(String.valueOf(manuallySelectedCoordinates.latitude))
-                .concat(", ")
-                .concat(String.valueOf(manuallySelectedCoordinates.longitude));
-        System.out.println("[DEBUG] coordinate:" + coordinates);
+
+        TextView tv = (TextView) findViewById(R.id.textView_coordinatesToBeConfirmed);
+        tv.setText(manuallySelectedCoordinates.latitude + ", " +
+                manuallySelectedCoordinates.longitude);
+
+        ll_button.setVisibility(View.GONE);
+        ll_confirm.setVisibility(View.VISIBLE);
     }
 
-    /*
-     * If the current coordinates are available, the camera is centered
-     * in that location; then, indipendently from the current position availabiltiy,
-     * the current position is requested again (it will presumably be used
-     * next time "center map" button will be pressed).
-     */
     public void centerMap(View v){
         locationManager.requestSingleUpdate(provider, this, null);
     }
 
     public void ok(View v){
         if(manuallySelectedCoordinates == null){
-            String message = "You must first select a location";
-            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
-            // toast che dice che non hai selezionato alcun punto sulla mappa
-            // e che puoi premere indietro per tornare all'attivita' precedente
+            // TODO: as of now, 2017/08/21, this branch should be never accessed
+            // String message = "You must first select a location";
+            // Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
         } else {
             Intent returnIntent = new Intent();
             returnIntent.putExtra("coordinates", manuallySelectedCoordinates);
@@ -125,8 +260,8 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
         }
     }
 
-    /*
-    public void get_report_index(View v) {
+
+    private void get_report_index() {
         System.out.println("[DEBUG] inside the get_report_index");
         StringRequest postRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
@@ -141,12 +276,60 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
                                 loadingDialog.dismiss();
                             }
                         } else {
-                            String message = "Reports retrieved successfully";
-                            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                            if(loadingDialog != null && loadingDialog.isShowing()){
-                                loadingDialog.dismiss();
+                            response = response.substring(1, (response.length() - 1));
+                            String[] reports = response.split("=");
+                            int reportNum = reports.length;
+                            for(int i=0; i<reportNum; i++){
+                                String[] reportField = reports[i].split("~");
+                                /*
+                                int authorIdActual = Integer.parseInt(authorId);
+                                int reportIdActual = Integer.parseInt(reportId);
+                                Double latitudeActual = Double.parseDouble(latitude);
+                                Double longitudeActual = Double.parseDouble(longitude);
+                                LatLng coordinates = new LatLng(Double.parseDouble(reportField[4]),
+                                    Double.parseDouble(reportField[5])));
+                                */
+
+
+                                Report newReport = new Report(
+                                        reportField[0],
+                                        Integer.parseInt(reportField[1]),
+                                        Integer.parseInt(reportField[2]),
+                                        reportField[3],
+                                        new LatLng(Double.parseDouble(reportField[4]),
+                                                Double.parseDouble(reportField[5])),
+                                        Float.parseFloat(reportField[6]));
+
+                                MarkerOptions markerOptions = new MarkerOptions();
+                                markerOptions.position(newReport.coordinates);
+                                markerOptions.title(newReport.reportTitle);
+                                markerOptions.snippet("Author: " + newReport.username + ". " +
+                                        "Avg rate: " + newReport.avgRating);
+                                if(newReport.authorId == userId){
+                                    markerOptions.icon(BitmapDescriptorFactory.
+                                            defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
+                                }
+                                Marker marker = gmap.addMarker(markerOptions);
+                                marker.setTag(newReport);
+                                gmap.setOnInfoWindowClickListener(new OnInfoWindowClickListener() {
+                                    @Override
+                                    public void onInfoWindowClick(Marker marker) {
+                                        Report r = (Report)marker.getTag();
+                                        if(r.reportImage != null){
+                                            // r.showDetailedView();
+                                        } else {
+                                            // Request the full details to the server
+                                            // retrieveReportDetails(r)
+
+                                        }
+                                    }
+                                });
+
+
+                                // reportList.addReport(newReport);
                             }
-                            //finish();
+
+                            // reportList.printFirst();
                         }
                     }
                 },
@@ -167,7 +350,26 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
         };
         queue.add(postRequest);
     }
-    */
+
+
+    //TODO: onback, se sta venendo mostrato il popup, va nascosto.
+
+    @Override
+    public void onBackPressed(){
+        if(manually_select_coordinates == true){
+            if(ll_confirm.getVisibility() == View.VISIBLE){
+                gmap.clear();
+                ll_confirm.setVisibility(View.GONE);
+                ll_button.setVisibility(View.VISIBLE);
+            } else {
+                super.onBackPressed();
+            }
+        } else {
+            super.onBackPressed();
+        }
+
+    }
+
 
     @Override
     public void onProviderDisabled(String provider){ }

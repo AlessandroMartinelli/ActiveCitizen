@@ -10,28 +10,41 @@
         android:layout_weight="1"
         class="com.google.android.gms.maps.MapFragment"/>
     <LinearLayout
-        android:id="@+id/buttonsLayout"
+        android:id="@+id/linearLayout_confirm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_margin="5dip"
+        android:visibility="gone">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/normal_text_size"
+            android:text="The choosen point has coordinates:"/>
+        <TextView
+            android:id="@+id/textView_coordinatesToBeConfirmed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/normal_text_size" />
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="confirm"
+            android:onClick="ok"/>
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/linearLayout_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="5dip"
-        android:orientation="horizontal">
-        <Button
-            android:id="@+id/okButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ok"
-            android:onClick="ok"/>
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="right"
-            android:orientation="horizontal" >
+        android:orientation="vertical">
         <Button
             android:id="@+id/currentPositionButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="right"
             android:text="center map"
             android:onClick="centerMap"/>
-        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

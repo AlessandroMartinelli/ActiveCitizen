@@ -63,7 +63,7 @@ public class ActiveCitizen extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_active_citizen);
-
+        
         queue = Volley.newRequestQueue(this);
         url = "http://www.activecitizen.altervista.org";
         preferences = getPreferences(MODE_PRIVATE);
@@ -79,7 +79,9 @@ public class ActiveCitizen extends AppCompatActivity {
             // User was logged in the previous session.
             // The login operation has to be repeated
             // each time the application is started.
+            System.out.println("[DEBUG] sto per eseguire login()");
             login(username, password);
+            System.out.println("[DEBUG] sto per eseguire ProgressDialog.show()");
             loginLoadingDialog = ProgressDialog.show(this, "", "Please wait...", true);
         }
         System.out.println("[DEBUG] onCreate(), user e pass e id sono " + username + ", " + password + ", " + userId);
@@ -214,7 +216,7 @@ public class ActiveCitizen extends AppCompatActivity {
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        System.out.println("[DEBUG] a response to the login operation arrived");
+                        System.out.println("[DEBUG] a response to the login operation arrived: " + response);
                         // response
                         Log.d("[DEBUG] Response", response);
                         if(response.equals("0")){
@@ -321,6 +323,13 @@ public class ActiveCitizen extends AppCompatActivity {
     public void launchReportAnIssue(View v) {
         System.out.println("[DEBUG] Sending an intent to ReportAnIssue");
         Intent i = new Intent(this, ReportAnIssue.class);
+        i.putExtra("user_id", userId);
+        startActivity(i);
+    }
+
+    public void launchBrowseMap(View v) {
+        System.out.println("[DEBUG] Sending an intent to BrowseMap");
+        Intent i = new Intent(this, ManualCoordinates.class);
         i.putExtra("user_id", userId);
         startActivity(i);
     }
