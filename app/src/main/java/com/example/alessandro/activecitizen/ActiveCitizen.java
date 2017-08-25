@@ -66,7 +66,7 @@ public class ActiveCitizen extends AppCompatActivity {
         
         queue = Volley.newRequestQueue(this);
         url = "http://www.activecitizen.altervista.org";
-        preferences = getPreferences(MODE_PRIVATE);
+        preferences = getSharedPreferences("account_information", MODE_PRIVATE);
         textView_activeCitizen_hello = (TextView) findViewById(R.id.textView_activeCitizen_hello);
 
         userId = preferences.getInt("userid", 0);

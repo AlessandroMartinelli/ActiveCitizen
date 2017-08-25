@@ -2,17 +2,26 @@ package com.example.alessandro.activecitizen;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Base64;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,11 +35,14 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.GoogleMap.OnInfoWindowClickListener;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -64,24 +76,68 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
     private ProgressDialog loadingDialog;
     private ReportList reportList;
 
-    protected void retrieveReportDetails(Report r){
-        final int reportId = r.reportId;
+    private AlertDialog reportDialog;
+
+    public Bitmap StringToBitMap(String encodedString){
+        try {
+            byte [] encodeByte= Base64.decode(encodedString,Base64.DEFAULT);
+            Bitmap bitmap= BitmapFactory.decodeByteArray(encodeByte, 0, encodeByte.length);
+            return bitmap;
+        } catch(Exception e) {
+            e.getMessage();
+            return null;
+        }
+    }
+
+    protected void retrieveReportDetails(final Report r){
+        System.out.println("[DEBUG] inside retrieveReportDetails_v1 for " + r.reportTitle);
         StringRequest postRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
                         if (response.equals("0")) {
-
+                            System.out.println("[DEBUG] response is 0 :c");
                         } else {
-                            response = response.substring(1, (response.length() - 1));
+                            //System.out.println("[DEBUG] there is a response! c:");
+                            //System.out.println("[DEBUG] raw response: " + response);
+                            //response = response.substring(1, (response.length() - 1));
+                            //System.out.println("[DEBUG] modified response: " + response);
+
+                            try {
+                                JSONObject jObject = new JSONObject("{output:" + response + "}");
+                                System.out.println("[DEBUG] first step passed");
+                                response = jObject.getString("output");
+                                //System.out.println("[DEBUG] parsed string is " + response);
+                            }
+                            catch (org.json.JSONException e){
+                                e.printStackTrace();
+                                //e.printStackTrace(System.out);
+                                //System.out.println("[DEBUG] exception: " + e.getStackTrace().);
+                                //System.out.println("[DEBUG] exception: " + e.getMessage());
+                                //System.out.println("[DEBUG] exception: " + e.getCause().toString());
+                            }
 
 
+                            System.out.println("[DEBUG] sto per splittare la stringa");
+                            String[] field = response.split("~");
+                            r.reportDescription = field[0];
+                            System.out.println("[DEBUG] report description is " + r.reportDescription);
+                            System.out.println("[DEBUG] recovered imageString length is " + field[1].length());
+                            Bitmap b = StringToBitMap(field[1]);
+                            if(b == null){
+                                System.out.println("[DEBUG] Error in decoding the image");
+                            } else {
+                                System.out.println("[DEBUG] Images correctly decoded");
+                                r.reportImage = b;
+                            }
+                            showReportDialog(r);
                         }
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
+                        System.out.println("[DEBUG] onErrorResponse. Error is " + error.getMessage());
                     }
                 })
         {
@@ -89,10 +145,11 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
             protected Map<String, String> getParams() {
                 Map<String, String>  params = new HashMap<String, String>();
                 params.put("action", "get_report_details");
-                params.put("report_id", "" + reportId);
+                params.put("report_id", "" + r.reportId);
                 return params;
             }
         };
+        queue.add(postRequest);
     }
 
 
@@ -162,6 +219,59 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
         // with all information abount this report.
     }
 
+    protected void showReportDialog(Report report) {
+        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        View inflater = layoutInflater.inflate(R.layout.dialog_report, null);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(inflater);
+        //builder.setCancelable(false);
+        builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialog) {
+                reportDialog.dismiss();
+            }
+        });
+        reportDialog = builder.show();
+
+        TextView title = (TextView) inflater.findViewById(R.id.textView_dialogReport_title);
+        TextView category = (TextView) inflater.findViewById(R.id.textView_dialogReport_category);
+        TextView details = (TextView) inflater.findViewById(R.id.textView_dialogReport_details);
+        ImageView image = (ImageView) inflater.findViewById(R.id.imageView_dialogReport_image);
+        RatingBar rating = (RatingBar) inflater.findViewById(R.id.ratingBar_dialogReport_rating);
+
+        title.setText(report.reportTitle);
+        details.setText(report.reportDescription);
+        image.setImageBitmap(report.reportImage);
+        rating.setRating(report.avgRating);
+
+        /*
+        registerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(editText_newUsername.getText().toString().isEmpty()){
+                    Toast.makeText(getApplicationContext(), "You must insert an username", Toast.LENGTH_LONG).show();
+                } else {
+                    System.out.println("[DEBUG] I'm going to execute register method");
+                    register(editText_newUsername.getText().toString(),
+                            editText_newPassword.getText().toString());
+                }
+            }
+        });
+
+        loginButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(editText_existingUsername.getText().toString().isEmpty()){
+                    Toast.makeText(getApplicationContext(), "You must insert an username", Toast.LENGTH_LONG).show();
+                } else {
+                    login(editText_existingUsername.getText().toString(),
+                            editText_existingPassword.getText().toString());
+                }
+            }
+        });
+        */
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
@@ -221,8 +331,12 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
             gmap.setOnMapClickListener(this);
         }
         centerMap(null);
+        System.out.println("[DEBUG] map type is " + gmap.getMapType());
         String message = "Wait a few seconds for the map to be centered...";
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+        //getUiSettings
+        UiSettings settings = gmap.getUiSettings();
+        settings.setZoomControlsEnabled(true);
     }
 
     @Override
@@ -261,7 +375,7 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
     }
 
 
-    private void get_report_index() {
+    protected void get_report_index() {
         System.out.println("[DEBUG] inside the get_report_index");
         StringRequest postRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
@@ -315,12 +429,15 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
                                     @Override
                                     public void onInfoWindowClick(Marker marker) {
                                         Report r = (Report)marker.getTag();
+                                        System.out.println("[DEBUG] Hey, you have pressed on an infoWindow! reportTitle is " + r.reportTitle);
                                         if(r.reportImage != null){
+                                            System.out.println("[DEBUG] reportImage already stored, no need to download it again");
                                             // r.showDetailedView();
                                         } else {
                                             // Request the full details to the server
-                                            // retrieveReportDetails(r)
-
+                                            System.out.println("[DEBUG] I'm going to retrieve the details of " + r.reportTitle);
+                                            // TODO qui forse dovrei passare anche il marker, così che, se opportuno, venga colorato
+                                            retrieveReportDetails(r);
                                         }
                                     }
                                 });

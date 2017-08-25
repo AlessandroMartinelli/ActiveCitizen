@@ -1,3 +1,5 @@
+// TODO: forse dovrei aggiungere il fatto che, quando uno fa click sul vuoto, se la tastiera è aperta la si ri-chiude etc.
+
 package com.example.alessandro.activecitizen;
 
 import android.app.Activity;
@@ -20,10 +22,13 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RatingBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -39,44 +44,86 @@ import android.Manifest;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.text.*;
+
+import static com.example.alessandro.activecitizen.R.array.categories_array;
 
 /**
  * Created by Alessandro on 04/08/2017.
  */
 
-public class ReportAnIssue extends AppCompatActivity implements LocationListener {
+public class ReportAnIssue extends AppCompatActivity implements LocationListener,
+        AdapterView.OnItemSelectedListener {
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
     static final int REQUEST_MANUALLY_CHOOSE_COORDINATES = 2;
     static final int LOCATION_PERMISSION = 3;
     static final int PICK_PHOTO = 4;
 
-    private int userId;
-    Intent startingIntent;
+    // TODO: turn all private into protected
+    protected int userId;
+    protected Intent startingIntent;
 
-    private LocationManager locationManager;
-    private Criteria criteria;
-    private String locationProvider;
-    private static String detailsDialogContent;
-    private ProgressDialog loadingDialog;
+    protected LocationManager locationManager;
+    protected Criteria criteria;
+    protected String locationProvider;
+    protected static String detailsDialogContent; //TODO: needs to be static?
+    protected ProgressDialog loadingDialog;
 
-    private RequestQueue queue;
-    private String url;
+    protected RequestQueue queue;
+    protected String url;
 
-    private LatLng latLng;
-    private Bitmap imageBitmap;
-    private String imageString;
+    protected LatLng latLng;
+    protected Bitmap imageBitmap;
+    protected String imageString;
+    protected int category;
 
-    private TextView currentLocation;
-    private EditText reportTitle;
-    private EditText reportDetails;
-    private EditText dialogDetails;
-    private ImageView photoPreview;
-    private Button buttonAddPhoto;
-    private RatingBar ratingBar;
+    protected TextView currentLocation;
+    protected EditText reportTitle;
+    protected Spinner reportCategory;
+    protected EditText reportDetails;
+    protected EditText dialogDetails;
+    protected ImageView photoPreview;
+    protected Button buttonAddPhoto;
+    protected RatingBar ratingBar;
 
+    /*
+     * Utility method used for retrieving the String corresponding
+     * to the category choosen by means of the spinner.
+     * Case 0 means no choice has been done.
+     */
+    protected String categoryIndexToString(int categoryIndex){
+        switch (categoryIndex){
+            case 0:
+                return "";
+            case 1:
+                return "viability";
+            case 2:
+                return "security";
+            case 3:
+                return "public lighting";
+            case 4:
+                return "buildings";
+            case 5:
+                return "decay";
+            case 6:
+                return "public health";
+            case 7:
+                return "other";
+            default:
+                return "";
+        }
+    }
+
+    /**
+     * Method used for codifying a Bitmap into a String. The String will be
+     * stored on a database
+     * @param bitmap the Bitmap to be codified
+     * @return the string codifying the given Bitmap
+     */
     public String BitMapToString(Bitmap bitmap){
         ByteArrayOutputStream baos=new  ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.PNG,100, baos);
@@ -128,14 +175,22 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         setContentView(R.layout.activity_report_an_issue);
 
         queue = Volley.newRequestQueue(this);
-        url = "http://www.activecitizen.altervista.org";
+        url = "http://www.activecitizen.altervista.org/send_report/";
 
         currentLocation = (TextView) findViewById(R.id.textView_currentLocation);
         reportTitle = (EditText) findViewById(R.id.editText_insertTitle);
+        reportCategory = (Spinner) findViewById(R.id.spinner_category);
         reportDetails = (EditText) findViewById(R.id.editText_details);
         photoPreview = (ImageView) findViewById(R.id.imageView_photoPreview);
         buttonAddPhoto = (Button) findViewById(R.id.button_addPhoto);
         ratingBar = (RatingBar) findViewById(R.id.ratingBar_priority);
+
+        CharSequence[] categories = getResources().getStringArray(categories_array);
+        ArrayAdapter<CharSequence> arrayAdapter = new ArrayAdapter<CharSequence>(this,
+                android.R.layout.simple_spinner_dropdown_item, categories);
+        reportCategory.setAdapter(arrayAdapter);
+        reportCategory.setOnItemSelectedListener(this);
+        category = 0; // poi occorrerà save instance state e restore
 
         startingIntent = getIntent();
         userId = startingIntent.getIntExtra("user_id", 0);
@@ -221,6 +276,17 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         }
     }
 
+    public Bitmap StringToBitMap(String encodedString){
+        try {
+            byte [] encodeByte= Base64.decode(encodedString,Base64.DEFAULT);
+            Bitmap bitmap= BitmapFactory.decodeByteArray(encodeByte, 0, encodeByte.length);
+            return bitmap;
+        } catch(Exception e) {
+            e.getMessage();
+            return null;
+        }
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
@@ -230,6 +296,10 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
             photoPreview.setImageBitmap(imageBitmap);
             buttonAddPhoto.setText("change photo");
             imageString = BitMapToString(imageBitmap);
+            // TODO: la parte sottostante è solo di debug, andrà tolta
+            System.out.println("[DEBUG] sent imageString length is " + imageString.length());
+            Bitmap imageBitmapNew = StringToBitMap(imageString);
+            photoPreview.setImageBitmap(imageBitmapNew);
         } else if (requestCode == PICK_PHOTO && resultCode == Activity.RESULT_OK) {
             // Result returned from the pick photo from gallery app
             if (data == null) {
@@ -249,6 +319,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                 // The imageString String, to be used in the send, is initialized
                 byte [] b=outputStream.toByteArray();
                 imageString= Base64.encodeToString(b, Base64.DEFAULT);
+                System.out.println("[DEBUG] selected image imageString length is " + imageString.length());
 
                 // The compressed image is retrieved
                 byte[] bitmapdata = outputStream.toByteArray();
@@ -297,6 +368,12 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
             String message = "No such application is available on your device";
             Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
         }
+    }
+
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int index, long id){
+        // TODO: category posso rimuoverlo da questa activity
+        category = index;
     }
 
     public void showDetailsDialog(View v) {
@@ -371,6 +448,8 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     public void resetReport(View v){
         currentLocation.setText(R.string.coordinates_retrieval_instruction);
         reportTitle.setText("");
+        reportCategory.setSelection(0);
+        category = 0;
         reportDetails.setText("");
         photoPreview.setImageResource(android.R.drawable.gallery_thumb);
         imageBitmap = null;
@@ -391,6 +470,9 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         } else if (reportTitle.getText().toString().isEmpty()) {
             Toast.makeText(getApplicationContext(), "You must insert a title", Toast.LENGTH_LONG).show();
             return;
+        } else if (category == 0){
+            Toast.makeText(getApplicationContext(), "You must choose a category", Toast.LENGTH_LONG).show();
+            return;
         } else if (reportDetails.getText().toString().isEmpty()){
             Toast.makeText(getApplicationContext(), "You must insert a description", Toast.LENGTH_LONG).show();
             return;
@@ -408,9 +490,12 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         String lat = "" + latLng.latitude;
         String lng = "" + latLng.longitude;
         String ratingString = "" + ratingBar.getRating();
-        System.out.println("[DEBUG] valore di ratingString: " + ratingString);
-        send(userIdString, lat, lng, reportTitle.getText().toString(),
+        String categoryString = "" + category;
+        //String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+
+        send(userIdString, lat, lng, reportTitle.getText().toString(), categoryString,
                 reportDetails.getText().toString(), imageString, ratingString);
+
 
 
 
@@ -424,14 +509,17 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     }
 
     private int send(final String userIdString, final String lat, final String lng,
-                     final String title, final String description, final String imageString,
-                     final String ratingString) {
+                     final String title, final String categoryString,
+                     final String details, final String imageString, final String ratingString) {
+        //System.out.println("[DEBUG] inside the send, variables are: userIdString=" + userIdString + ", lat=" + lat + "" +
+          //      ", lng=" + lng + ", title=" + title + ", categoryString=" + categoryString + ", date=" + date + "" +
+            //    ", details=" + details + ", imageString=" + imageString + ", ratingString=" + ratingString);
             StringRequest postRequest = new StringRequest(Request.Method.POST, url,
                     new Response.Listener<String>() {
                         @Override
                         public void onResponse(String response) {
                             // response
-                            Log.d("[DEBUG] Response", response);
+                            System.out.println("[DEBUG] Response" + response);
                             if(response.equals("0")){
                                 String message = "An error occurred while sending the report";
                                 Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
@@ -459,12 +547,12 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                 @Override
                 protected Map<String, String> getParams() {
                     Map<String, String>  params = new HashMap<String, String>();
-                    params.put("action", "send_report");
                     params.put("author_id", userIdString);
+                    params.put("title", title);
+                    params.put("category", categoryString);
+                    params.put("details", details);
                     params.put("latitude", lat);
                     params.put("longitude", lng);
-                    params.put("title", title);
-                    params.put("description", description);
                     params.put("image", imageString);
                     params.put("rating", ratingString);
                     return params;
@@ -494,5 +582,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     public void onProviderEnabled(String provider){ }
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) { }
+    @Override
+    public void onNothingSelected(AdapterView<?> arg0){}
 
 }

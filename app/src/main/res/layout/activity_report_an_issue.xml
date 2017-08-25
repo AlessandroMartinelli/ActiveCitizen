@@ -34,7 +34,6 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/textView_currentLocation"
             android:layout_alignLeft="@+id/textView_currentLocation"
-            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:text="current"
             android:onClick="obtainCurrentCoordinates"/>
         <Button
@@ -43,7 +42,6 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/textView_currentLocation"
             android:layout_alignRight="@+id/textView_currentLocation"
-            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:text="choose on map"
             android:onClick="manuallySelectCoordinates"/>
         <TextView
@@ -51,8 +49,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/button_currentLocation"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_alignParentLeft="true"
-            android:layout_marginRight="@dimen/activity_intraelement_horizontal_margin"
             android:textSize="@dimen/normal_text_size"
             android:text="Title" />
         <EditText
@@ -60,19 +58,38 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@+id/button_currentLocation"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_toRightOf="@+id/textView_title"
             android:layout_alignLeft="@+id/textView_currentLocation"
-            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:background="@android:color/white"
-            android:digits="0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghilmnopqrstuvwxyz ?!.,:;_-'"
-            android:inputType="textMultiLine"
+            android:digits="0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz àèìòù?!.,:;_-'"
+            android:inputType="textCapSentences|textMultiLine"
             android:hint="insert title, max 50 chars"
             android:maxLength="50" />
+        <TextView
+            android:id="@+id/textView_category"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/editText_insertTitle"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
+            android:layout_alignParentLeft="true"
+            android:textSize="@dimen/normal_text_size"
+            android:text="Category" />
+        <Spinner
+            android:id="@+id/spinner_category"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/editText_insertTitle"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
+            android:layout_toRightOf="@+id/textView_category"
+            android:layout_alignLeft="@+id/textView_currentLocation">
+        </Spinner>
         <TextView
             android:id="@+id/textView_details"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/editText_insertTitle"
+            android:layout_below="@+id/spinner_category"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_alignParentLeft="true"
             android:textSize="@dimen/normal_text_size"
             android:text="Details" />
@@ -80,13 +97,13 @@
             android:id="@+id/editText_details"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/editText_insertTitle"
+            android:layout_below="@+id/spinner_category"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_toRightOf="@+id/textView_details"
             android:layout_alignLeft="@+id/textView_currentLocation"
-            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:background="@android:color/white"
-            android:digits="0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghilmnopqrstuvwxyz ?!.,:;_-'"
-            android:inputType="textMultiLine"
+            android:digits="0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz àèìòù?!.,:;_-'"
+            android:inputType="textCapSentences|textMultiLine"
             android:hint="insert details, max 500 chars"
             android:maxLength="500" />
         <TextView
@@ -94,8 +111,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/editText_details"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_alignParentLeft="true"
-            android:layout_marginRight="@dimen/activity_intraelement_horizontal_margin"
             android:textSize="@dimen/normal_text_size"
             android:text="Photo" />
         <ImageView
@@ -103,8 +120,9 @@
             android:layout_width="120dp"
             android:layout_height="120dp"
             android:layout_below="@id/editText_details"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_alignLeft="@+id/editText_details"
-            android:layout_alignRight="@+id/editText_details"
+            android:layout_alignRight="@+id/textView_currentLocation"
             android:layout_centerHorizontal="true"
             android:adjustViewBounds="true"
             android:src="@android:drawable/gallery_thumb"/>
@@ -113,9 +131,8 @@
             android:layout_width="140dp"
             android:layout_height="wrap_content"
             android:layout_below="@id/imageView_photoPreview"
-            android:layout_alignLeft="@+id/textView_currentLocation"
-            android:layout_marginLeft="59dp"
-            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
+            android:layout_alignLeft="@+id/imageView_photoPreview"
+            android:layout_alignRight="@+id/imageView_photoPreview"
             android:text="take a photo"
             android:onClick="pickImageDialog" />
         <TextView
@@ -123,9 +140,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/button_addPhoto"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_alignParentLeft="true"
-            android:layout_marginRight="@dimen/activity_intraelement_horizontal_margin"
-            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:textSize="@dimen/normal_text_size"
             android:text="Priority" />
         <RatingBar
@@ -133,15 +149,16 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/button_addPhoto"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_alignLeft="@+id/textView_currentLocation"
-            android:layout_marginLeft="11dp"
-            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
+            android:layout_alignRight="@+id/textView_currentLocation"
             android:numStars="5" />
         <Button
             android:id="@+id/buttonReset"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/ratingBar_priority"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:backgroundTint="@color/dangerousAnswer"
             android:text="Reset"
             android:onClick="resetReport"/>
@@ -150,6 +167,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/ratingBar_priority"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_centerHorizontal="true"
             android:backgroundTint="@color/positiveAnswer"
             android:text="Send"
@@ -159,7 +177,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/ratingBar_priority"
-            android:layout_alignRight="@+id/editText_details"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
+            android:layout_alignRight="@+id/textView_currentLocation"
             android:backgroundTint="@color/saveAnswer"
             android:text="Save"
             android:onClick="get_report_index"/>

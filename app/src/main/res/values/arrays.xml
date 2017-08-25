@@ -4,4 +4,14 @@
         <item>Camera</item>
         <item>Gallery</item>
     </string-array>
+    <string-array name="categories_array">
+        <item>Please choose a category</item>
+        <item>Viability</item>
+        <item>Security</item>
+        <item>Public lighting</item>
+        <item>Buildings</item>
+        <item>Decay</item>
+        <item>Public health</item>
+        <item>Other</item>
+    </string-array>
 </resources>
