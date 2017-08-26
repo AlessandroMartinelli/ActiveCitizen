@@ -8,7 +8,6 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -28,11 +27,6 @@ import com.android.volley.toolbox.Volley;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import static android.R.id.message;
-import static android.icu.lang.UCharacter.GraphemeClusterBreak.V;
-import static com.example.alessandro.activecitizen.R.id.editText_dialogAccount_existingUsername;
-import static com.example.alessandro.activecitizen.R.id.username;
 
 public class ActiveCitizen extends AppCompatActivity {
 
@@ -107,7 +101,7 @@ public class ActiveCitizen extends AppCompatActivity {
     @Override
     protected void onStop(){
         super.onStop();
-        System.out.println("[DEBUG] onStop()");
+        //System.out.println("[DEBUG] onStop()");
     }
 
     @Override
@@ -118,19 +112,19 @@ public class ActiveCitizen extends AppCompatActivity {
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
-        System.out.println("[DEBUG] onSaveInstanceState()");
+        //System.out.println("[DEBUG] onSaveInstanceState()");
         outState.putInt("userid", userId);
         outState.putString("username", username);
         outState.putString("password", password);
         if((editText_newUsername != null) && (loginDialog.isShowing())) {
             // andrebbe fatto solo se dialog is showing...
-            System.out.println("[DEBUG] sto salvando " + editText_newUsername.getText().toString());
+            //System.out.println("[DEBUG] sto salvando " + editText_newUsername.getText().toString());
             outState.putString("new_username", editText_newUsername.getText().toString());
             outState.putString("new_password", editText_newPassword.getText().toString());
             outState.putString("existing_username", editText_existingUsername.getText().toString());
             outState.putString("existing_password", editText_existingPassword.getText().toString());
         } else {
-            System.out.println("[DEBUG] newUsername is null, thus dialog field are not saved");
+            //System.out.println("[DEBUG] newUsername is null, thus dialog field are not saved");
         }
         super.onSaveInstanceState(outState);
     }
@@ -329,7 +323,7 @@ public class ActiveCitizen extends AppCompatActivity {
 
     public void launchBrowseMap(View v) {
         System.out.println("[DEBUG] Sending an intent to BrowseMap");
-        Intent i = new Intent(this, ManualCoordinates.class);
+        Intent i = new Intent(this, BrowseMap.class);
         i.putExtra("user_id", userId);
         startActivity(i);
     }

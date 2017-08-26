@@ -44,10 +44,8 @@ import android.Manifest;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.text.*;
 
 import static com.example.alessandro.activecitizen.R.array.categories_array;
 
@@ -89,34 +87,6 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     protected ImageView photoPreview;
     protected Button buttonAddPhoto;
     protected RatingBar ratingBar;
-
-    /*
-     * Utility method used for retrieving the String corresponding
-     * to the category choosen by means of the spinner.
-     * Case 0 means no choice has been done.
-     */
-    protected String categoryIndexToString(int categoryIndex){
-        switch (categoryIndex){
-            case 0:
-                return "";
-            case 1:
-                return "viability";
-            case 2:
-                return "security";
-            case 3:
-                return "public lighting";
-            case 4:
-                return "buildings";
-            case 5:
-                return "decay";
-            case 6:
-                return "public health";
-            case 7:
-                return "other";
-            default:
-                return "";
-        }
-    }
 
     /**
      * Method used for codifying a Bitmap into a String. The String will be
@@ -361,7 +331,9 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     }
 
     protected void manuallySelectCoordinates(View v) {
-        Intent manualCoordinatesIntent = new Intent(this, ManualCoordinates.class);
+        // TODO: questa cosa dovrei metterla ogni volta?
+        // secondo me no, secondo me giusto se chiamo roba esterna, ma non in questo caso
+        Intent manualCoordinatesIntent = new Intent(this, BrowseMap.class);
         if(manualCoordinatesIntent.resolveActivity(getPackageManager()) != null) {
             startActivityForResult(manualCoordinatesIntent, REQUEST_MANUALLY_CHOOSE_COORDINATES);
         } else {
@@ -492,6 +464,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         String ratingString = "" + ratingBar.getRating();
         String categoryString = "" + category;
         //String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+
 
         send(userIdString, lat, lng, reportTitle.getText().toString(), categoryString,
                 reportDetails.getText().toString(), imageString, ratingString);

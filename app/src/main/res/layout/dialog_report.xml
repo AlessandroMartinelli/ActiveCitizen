@@ -26,13 +26,12 @@
             android:layout_height="wrap_content"
             android:layout_below="@id/textView_dialogReport_windowTitle"
             android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
-            android:layout_centerHorizontal="true"
             android:textSize="@dimen/normal_text_size"
             android:text="Title"
             />
         <TextView
             android:id="@+id/textView_dialogReport_category"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@id/textView_dialogReport_title"
             android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
@@ -41,22 +40,30 @@
             android:text="Category"
             />
         <TextView
-            android:id="@+id/textView_dialogReport_details"
-            android:layout_width="wrap_content"
+            android:id="@+id/textView_dialogReport_author_and_date"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@+id/textView_dialogReport_category"
             android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
-            android:layout_centerHorizontal="true"
             android:textSize="@dimen/normal_text_size"
-            android:text="Details"
+            android:text="Reported by ... on ..."
             />
+        <TextView
+            android:id="@+id/textView_dialogReport_details"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/textView_dialogReport_author_and_date"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
+            android:textSize="@dimen/normal_text_size"
+            android:text="Details" />
         <ImageView
             android:id="@+id/imageView_dialogReport_image"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="150dp"
             android:layout_below="@+id/textView_dialogReport_details"
             android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_centerHorizontal="true"
+            android:scaleType="centerCrop"
             />
         <RatingBar
             android:id="@+id/ratingBar_dialogReport_rating"
@@ -66,5 +73,15 @@
             android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_centerHorizontal="true"
             android:numStars="5" />
+        <Button
+            android:id="@+id/button_ratingBar_rate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/normal_text_size"
+            android:layout_below="@+id/ratingBar_dialogReport_rating"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
+            android:layout_centerHorizontal="true"
+            android:text="Rate"
+            />
     </RelativeLayout>
 </ScrollView>

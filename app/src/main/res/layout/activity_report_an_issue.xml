@@ -80,7 +80,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@+id/editText_insertTitle"
-            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
+
             android:layout_toRightOf="@+id/textView_category"
             android:layout_alignLeft="@+id/textView_currentLocation">
         </Spinner>
@@ -181,7 +181,7 @@
             android:layout_alignRight="@+id/textView_currentLocation"
             android:backgroundTint="@color/saveAnswer"
             android:text="Save"
-            android:onClick="get_report_index"/>
+            android:onClick="getReportIndex"/>
     </RelativeLayout>
 </ScrollView>
 

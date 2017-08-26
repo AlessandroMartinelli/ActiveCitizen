@@ -18,7 +18,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RatingBar;
@@ -44,19 +43,22 @@ import com.google.android.gms.maps.GoogleMap.OnInfoWindowClickListener;
 
 import org.json.JSONObject;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
 import static android.R.id.message;
-import static com.example.alessandro.activecitizen.R.id.username;
 import static java.lang.Integer.parseInt;
 
 /**
  * Created by Alessandro on 06/08/2017.
  */
 
-public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener, LocationListener {
+public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener, LocationListener {
 
     private LocationManager locationManager;
     private GoogleMap gmap;
@@ -74,11 +76,16 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
     private RequestQueue queue;
     private String url;
     private ProgressDialog loadingDialog;
-    private ReportList reportList;
+    //private ReportList reportList;
 
     private AlertDialog reportDialog;
 
-    public Bitmap StringToBitMap(String encodedString){
+    /**
+     * Retrieve the Bitmap codified in the given String
+     * @param encodedString the string encoding a Bitmap
+     * @return the Bitmap codified in the given String
+     */
+    protected Bitmap StringToBitMap(String encodedString){
         try {
             byte [] encodeByte= Base64.decode(encodedString,Base64.DEFAULT);
             Bitmap bitmap= BitmapFactory.decodeByteArray(encodeByte, 0, encodeByte.length);
@@ -89,8 +96,38 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
         }
     }
 
-    protected void retrieveReportDetails(final Report r){
-        System.out.println("[DEBUG] inside retrieveReportDetails_v1 for " + r.reportTitle);
+    /*
+ * Utility method used for retrieving the String corresponding
+ * to the category choosen by means of the spinner.
+ * Case 0 means no choice has been done.
+ */
+    protected String categoryIndexToString(int categoryIndex){
+        switch (categoryIndex){
+            case 0:
+                return "";
+            case 1:
+                return "Viability";
+            case 2:
+                return "Security";
+            case 3:
+                return "Public lighting";
+            case 4:
+                return "Buildings";
+            case 5:
+                return "Decay";
+            case 6:
+                return "Public health";
+            case 7:
+                return "Other";
+            default:
+                return "";
+        }
+    }
+
+    protected void getReportDetails(final Report r){
+        url = "http://www.activecitizen.altervista.org/get_report_details/";
+        System.out.println("[DEBUG] inside retrieveReportDetails_v1 for " + r.reportTitle +
+                "; userId is " + userId + "; your_rate is " + r.your_rate);
         StringRequest postRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
@@ -105,7 +142,7 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
 
                             try {
                                 JSONObject jObject = new JSONObject("{output:" + response + "}");
-                                System.out.println("[DEBUG] first step passed");
+                                //System.out.println("[DEBUG] first step passed");
                                 response = jObject.getString("output");
                                 //System.out.println("[DEBUG] parsed string is " + response);
                             }
@@ -118,12 +155,15 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
                             }
 
 
-                            System.out.println("[DEBUG] sto per splittare la stringa");
+                            //System.out.println("[DEBUG] sto per splittare la stringa");
                             String[] field = response.split("~");
-                            r.reportDescription = field[0];
-                            System.out.println("[DEBUG] report description is " + r.reportDescription);
-                            System.out.println("[DEBUG] recovered imageString length is " + field[1].length());
-                            Bitmap b = StringToBitMap(field[1]);
+                            System.out.println("[DEBUG] date, expressed as a string, is " + field[1]);
+                            r.reportAuthor = field[0];
+                                r.reportDate = field[1];
+                            r.reportDetails = field[2];
+                            System.out.println("[DEBUG] report description is " + r.reportDetails);
+                            //System.out.println("[DEBUG] recovered imageString length is " + field[3].length());
+                            Bitmap b = StringToBitMap(field[3]);
                             if(b == null){
                                 System.out.println("[DEBUG] Error in decoding the image");
                             } else {
@@ -153,6 +193,7 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
     }
 
 
+    /*
     private class ReportList{
         protected ArrayList<Report> reportList;
 
@@ -170,6 +211,7 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
             }
         }
 
+
         public void printFirst(){
             System.out.println("[DEBUG] sono dentro la printFirst");
             Report r = reportList.get(0);
@@ -184,32 +226,38 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
                     "coordinates " + r.coordinates.latitude + ", " + r.coordinates.longitude);
         }
     }
+    */
 
-    private class Report{
-        protected String username;
+    protected class Report{
+        // dovrei aggiungere dei getter e dei setter per i campi non inizializzati nel costruttore
+        protected String reportAuthor;
         protected int authorId;
         protected int reportId;
         protected String reportTitle;
+        protected int reportCategory;
+        protected String reportDate;
+        protected String reportDetails;
         protected LatLng coordinates;
-        protected Float avgRating;
-        protected String reportDescription;
         protected Bitmap reportImage;
+        protected Float avgRating;
+        protected Float your_rate;
 
-        public Report(String username, int authorId, int reportId, String reportTitle,
-                           LatLng coordinates, Float avgRating){
-            this.username = username;
+        public Report(int authorId, int reportId, String reportTitle, int reportCategory,
+                      LatLng coordinates, Float avgRating, Float your_rate){
             this.authorId = authorId;
             this.reportId = reportId;
             this.reportTitle = reportTitle;
+            this.reportCategory = reportCategory;
             this.coordinates = coordinates;
             this.avgRating = avgRating;
+            this.your_rate = your_rate;
         }
 
         public String toString(){
-            String s = "username " + username + "\n" +
-                    "authorId " + authorId + "\n" +
+            String s = "authorId " + authorId + "\n" +
                     "reportId " + reportId + "\n" +
                     "reportTitle " + reportTitle + "\n" +
+                    "reportCategory " + reportCategory + "\n" +
                     "coordinates " + coordinates.latitude + ", " + coordinates.longitude + "\n" +
                     "avgRating " + avgRating;
             return s;
@@ -219,7 +267,7 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
         // with all information abount this report.
     }
 
-    protected void showReportDialog(Report report) {
+    protected void showReportDialog(final Report report) {
         LayoutInflater layoutInflater = LayoutInflater.from(this);
         View inflater = layoutInflater.inflate(R.layout.dialog_report, null);
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -235,14 +283,66 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
 
         TextView title = (TextView) inflater.findViewById(R.id.textView_dialogReport_title);
         TextView category = (TextView) inflater.findViewById(R.id.textView_dialogReport_category);
+        TextView author_and_date = (TextView) inflater.findViewById(R.id.textView_dialogReport_author_and_date);
         TextView details = (TextView) inflater.findViewById(R.id.textView_dialogReport_details);
         ImageView image = (ImageView) inflater.findViewById(R.id.imageView_dialogReport_image);
-        RatingBar rating = (RatingBar) inflater.findViewById(R.id.ratingBar_dialogReport_rating);
+        final RatingBar rating = (RatingBar) inflater.findViewById(R.id.ratingBar_dialogReport_rating);
+        Button buttonRate = (Button) inflater.findViewById(R.id.button_ratingBar_rate);
 
         title.setText(report.reportTitle);
-        details.setText(report.reportDescription);
+        category.setText("Category: " + categoryIndexToString(report.reportCategory));
+        author_and_date.setText("Reported by " + report.reportAuthor + " on " +
+                //report.reportDate.getYear() + "-" + report.reportDate.getMonth() +
+                //"-" + report.reportDate.getDay());
+                report.reportDate);
+        details.setText(report.reportDetails);
         image.setImageBitmap(report.reportImage);
-        rating.setRating(report.avgRating);
+        // TODO: qui dovrei infilare un textview che riporta il voto medio
+        rating.setRating(report.your_rate);
+
+        buttonRate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final int the_rate_is_new = (report.your_rate == 0? 1 : 0);
+                System.out.println("[DEBUG]: the_rate_is_new vale " + the_rate_is_new);
+                url = "http://www.activecitizen.altervista.org/rate/";
+                //System.out.println("[DEBUG] inside the send rate, rate is " + rating.getRating() +
+                  //      ", old_rate is " + old_rate);
+                StringRequest postRequest = new StringRequest(Request.Method.POST, url,
+                        new Response.Listener<String>() {
+                            @Override
+                            public void onResponse(String response) {
+                                if (response.equals("-1")) {
+                                    System.out.println("[DEBUG] response is 0 :c");
+                                } else {
+                                    System.out.println("[DEBUG] response is " + response);
+                                    String message = "Report voted successfully";
+                                    Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                                    //TODO qui si deve poi fare il dismiss del dialog
+                                }
+                            }
+                        },
+                        new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                System.out.println("[DEBUG] onErrorResponse. Error is " + error.getMessage());
+                            }
+                        })
+                {
+                    @Override
+                    protected Map<String, String> getParams() {
+                        Map<String, String>  params = new HashMap<String, String>();
+                        params.put("user_id", "" + userId);
+                        params.put("report_id", "" + report.reportId);
+                        params.put("rate", ""  + rating.getRating());
+                        params.put("old_rate", "" + report.your_rate);
+                        params.put("the_rate_is_new", "" + the_rate_is_new);
+                        return params;
+                    }
+                };
+                queue.add(postRequest);
+            }
+        });
 
         /*
         registerButton.setOnClickListener(new View.OnClickListener() {
@@ -275,42 +375,45 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
-
-        Intent startingIntent = getIntent();
-        userId = startingIntent.getIntExtra("user_id", 0);
-        if(userId == 0){
-            Toast.makeText(getApplicationContext(), "Account error", Toast.LENGTH_LONG).show();
-            finish();
-        }
-
-        if(getCallingActivity() == null){
-            // The activity was started through "browse map"
-            manually_select_coordinates = false;
-            setContentView(R.layout.activity_manual_coordinates);
-            queue = Volley.newRequestQueue(this);
-            url = "http://www.activecitizen.altervista.org";
-            reportList = new ReportList();
-            get_report_index();
-        } else {
-            // The activity was started through "manually select coordinates"
-            manually_select_coordinates = true;
-            setContentView(R.layout.activity_manual_coordinates);
-            ll_confirm = (LinearLayout) findViewById(R.id.linearLayout_confirm);
-            ll_button = (LinearLayout) findViewById(R.id.linearLayout_button);
-        }
+        setContentView(R.layout.activity_browse_map);
 
         if(savedInstanceState == null){
-            // The activity has been started, this is not a rotation
+            // The activity has been started, this is not a rotation, since
+            // we do not want to ask the current position at each rotation
             ((MapFragment) getFragmentManager().findFragmentById(R.id.coordinates_map)).
                     getMapAsync(this);
             locationManager = (LocationManager)getSystemService(LOCATION_SERVICE);
             criteria = new Criteria();
             criteria.setAccuracy(Criteria.ACCURACY_FINE);
             provider = locationManager.getBestProvider(criteria, true);
+            /*
             if(provider.isEmpty()){
+                // TODO: ???
             } else {
                 locationManager.requestSingleUpdate(provider, this, null);
             }
+            */
+        }
+
+        if(getCallingActivity() == null){
+            // The activity was started through "browse map" from the main screen
+            manually_select_coordinates = false;
+
+            Intent startingIntent = getIntent();
+            userId = startingIntent.getIntExtra("user_id", 0);
+            if(userId == 0){
+                Toast.makeText(getApplicationContext(), "Account error", Toast.LENGTH_LONG).show();
+                finish();
+            }
+            queue = Volley.newRequestQueue(this);
+            url = "http://www.activecitizen.altervista.org";
+            //reportList = new ReportList();
+            getReportIndex();
+        } else {
+            // The activity was started through "manually select coordinates"
+            manually_select_coordinates = true;
+            ll_confirm = (LinearLayout) findViewById(R.id.linearLayout_confirm);
+            ll_button = (LinearLayout) findViewById(R.id.linearLayout_button);
         }
 
     }
@@ -330,7 +433,7 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
         if(manually_select_coordinates == true) {
             gmap.setOnMapClickListener(this);
         }
-        centerMap(null);
+        //centerMap(null);
         System.out.println("[DEBUG] map type is " + gmap.getMapType());
         String message = "Wait a few seconds for the map to be centered...";
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
@@ -342,17 +445,14 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
     @Override
     public void onMapClick(LatLng clickedCoordinates){
         manuallySelectedCoordinates = clickedCoordinates;
-
         gmap.clear();
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(manuallySelectedCoordinates);
         gmap.addMarker(markerOptions);
 
-
         TextView tv = (TextView) findViewById(R.id.textView_coordinatesToBeConfirmed);
         tv.setText(manuallySelectedCoordinates.latitude + ", " +
                 manuallySelectedCoordinates.longitude);
-
         ll_button.setVisibility(View.GONE);
         ll_confirm.setVisibility(View.VISIBLE);
     }
@@ -374,15 +474,21 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
         }
     }
 
+    //TODO: penso che lo zoom automatico sia sbagliato: magari uno e' li che sta
+    // selezionando minuziosamente una zona, e poi lo zoom automatico gli stravolge tutto
 
-    protected void get_report_index() {
-        System.out.println("[DEBUG] inside the get_report_index");
+    //TODO: al momento, se non ci sono segnalazioni, crasha.
+    protected void getReportIndex() {
+        url= "http://www.activecitizen.altervista.org/get_report_index/";
+        System.out.println("[DEBUG] inside the getReportIndex");
         StringRequest postRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
                         // response
-                        System.out.println("[DEBUG] get_report_index response is " + response);
+                        Log.d("log", "[DEBUG] getReportIndex response is " + response);
+                        //System.out.println("[DEBUG] getReportIndex response is " + response);
+                        // TODO: ricordarsi di gestire in maniera uniforme gli errori, in tutte le activity
                         if(response.equals("0")){
                             String message = "No report to retrieve";
                             Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
@@ -390,63 +496,88 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
                                 loadingDialog.dismiss();
                             }
                         } else {
-                            response = response.substring(1, (response.length() - 1));
+                            try {
+                                //System.out.println("[DEBUG] inside the try block");
+                                JSONObject jObject = new JSONObject("{output:" + response + "}");
+                                //System.out.println("[DEBUG] first step passed");
+                                response = jObject.getString("output");
+                                //System.out.println("[DEBUG] response is now " + response);
+                                //System.out.println("[DEBUG] parsed string is " + response);
+                            }
+                              catch (org.json.JSONException e){
+                                e.printStackTrace();
+                                //e.printStackTrace(System.out);
+                                //System.out.println("[DEBUG] exception: " + e.getStackTrace().);
+                                //System.out.println("[DEBUG] exception: " + e.getMessage());
+                                //System.out.println("[DEBUG] exception: " + e.getCause().toString());
+                            }
+
+
                             String[] reports = response.split("=");
                             int reportNum = reports.length;
                             for(int i=0; i<reportNum; i++){
                                 String[] reportField = reports[i].split("~");
-                                /*
-                                int authorIdActual = Integer.parseInt(authorId);
-                                int reportIdActual = Integer.parseInt(reportId);
-                                Double latitudeActual = Double.parseDouble(latitude);
-                                Double longitudeActual = Double.parseDouble(longitude);
-                                LatLng coordinates = new LatLng(Double.parseDouble(reportField[4]),
-                                    Double.parseDouble(reportField[5])));
-                                */
-
 
                                 Report newReport = new Report(
-                                        reportField[0],
-                                        Integer.parseInt(reportField[1]),
-                                        Integer.parseInt(reportField[2]),
-                                        reportField[3],
-                                        new LatLng(Double.parseDouble(reportField[4]),
+                                        Integer.parseInt(reportField[0]), //authorId
+                                        Integer.parseInt(reportField[1]), //reportId
+                                        reportField[2],                   //title
+                                        Integer.parseInt(reportField[3]), //category
+                                        new LatLng(Double.parseDouble(reportField[4]),  //coordiates
                                                 Double.parseDouble(reportField[5])),
-                                        Float.parseFloat(reportField[6]));
+                                        Float.parseFloat(reportField[6]),   //avgRating
+                                        Float.parseFloat(reportField[7]));  //yourRate
+                                System.out.println("[DEBUG] per il marker " +
+                                        newReport.reportTitle + " your_rate vale " + newReport.your_rate);
+
+                                //TODO: alla risposta qui data, bisogna concatenare i dati riguardanti
+                                // quali report ha votato l'utente (magari senza includere i suoi)
 
                                 MarkerOptions markerOptions = new MarkerOptions();
                                 markerOptions.position(newReport.coordinates);
                                 markerOptions.title(newReport.reportTitle);
-                                markerOptions.snippet("Author: " + newReport.username + ". " +
-                                        "Avg rate: " + newReport.avgRating);
+                                markerOptions.snippet("Category: " +
+                                        categoryIndexToString(newReport.reportCategory) +
+                                        ". Avg rate: " + newReport.avgRating);
                                 if(newReport.authorId == userId){
                                     markerOptions.icon(BitmapDescriptorFactory.
                                             defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
+                                    // TODO: qui bisogna aggiungere "altrimenti: se l'hai votato, colore diverso"
+                                    System.out.println("[DEBUG] per questo marker, your_rate vale " + newReport.your_rate);
+                                } else if(newReport.your_rate != 0){
+                                    // The user has already votes this issue
+                                    markerOptions.icon(BitmapDescriptorFactory.
+                                            defaultMarker(BitmapDescriptorFactory.HUE_ORANGE));
                                 }
                                 Marker marker = gmap.addMarker(markerOptions);
                                 marker.setTag(newReport);
                                 gmap.setOnInfoWindowClickListener(new OnInfoWindowClickListener() {
                                     @Override
                                     public void onInfoWindowClick(Marker marker) {
+                                        System.out.println("[DEBUG] onInfoWindowclick called on marker " + marker.getId());
                                         Report r = (Report)marker.getTag();
                                         System.out.println("[DEBUG] Hey, you have pressed on an infoWindow! reportTitle is " + r.reportTitle);
                                         if(r.reportImage != null){
                                             System.out.println("[DEBUG] reportImage already stored, no need to download it again");
-                                            // r.showDetailedView();
+                                            // TODO: r.showDetailedView();
+                                            showReportDialog(r);
                                         } else {
                                             // Request the full details to the server
                                             System.out.println("[DEBUG] I'm going to retrieve the details of " + r.reportTitle);
                                             // TODO qui forse dovrei passare anche il marker, così che, se opportuno, venga colorato
-                                            retrieveReportDetails(r);
+                                            getReportDetails(r);
                                         }
                                     }
                                 });
+
+                                // TODO: aggiornare i valori subito dopo averli modificati
 
 
                                 // reportList.addReport(newReport);
                             }
 
                             // reportList.printFirst();
+
                         }
                     }
                 },
@@ -461,8 +592,9 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String>  params = new HashMap<String, String>();
-                params.put("action", "get_report_index");
+                params.put("user_id", "" + userId);
                 return params;
+                // TODO: provare a vedere se restituire null funziona lo stesso
             }
         };
         queue.add(postRequest);
@@ -499,3 +631,6 @@ public class ManualCoordinates extends AppCompatActivity implements OnMapReadyCa
 
 //android:icon="@android/drawable/..
 
+//TODO: back non sta facendo il suo dovere di, se un marker ha la sua finestrella visualizzata, toglierla e basta
+
+//quando uno clicca per vedere i dettagli di un report, la finestrella relativa al marker relativo dovrebbe scomparire, cosi' che se uno fa indietro non la vede
