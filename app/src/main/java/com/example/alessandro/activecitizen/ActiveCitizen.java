@@ -1,22 +1,20 @@
 package com.example.alessandro.activecitizen;
 
-import android.app.Dialog;
-import android.app.ProgressDialog;
+import android.app.Activity;
+import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.Configuration;
-import android.os.AsyncTask;
+import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
@@ -35,37 +33,84 @@ import com.android.volley.toolbox.Volley;
 import java.util.HashMap;
 import java.util.Map;
 
-import static android.R.attr.colorBackground;
-import static android.R.string.no;
+import static android.R.id.message;
 
 public class ActiveCitizen extends AppCompatActivity {
 
-    protected RequestQueue queue;               // The queue of requests to be sent to the server
+    protected static RequestQueue queue;               // The queue of requests to be sent to the server
 
     // Account informations
-    protected int userId;                       // ID uniquely identifying one account
-    protected String username;                  // Account username
-    protected String password;                  // Account password
-    protected SharedPreferences preferences;    // Preferences permanently storing account data
+    protected static int userId;                       // ID uniquely identifying one account
+    protected static String username;                  // Account username
+    protected static String password;                  // Account password
+    protected static SharedPreferences preferences;    // Preferences permanently storing account data
     protected boolean fromConfigurationChange;  // Stores whether the activity was created after a configuration change
     static int logged;                          // Stores whether the user is logged
 
-    protected AlertDialog accountDialog;        // Dialog allowing the user to login/register
-    protected String existingUsernameRestored;  // Copy of the accountDialog username field in login form
-    protected String existingPasswordRestored;  // Copy of the accountDialog password field in login form
-    protected String newUsernameRestored;       // Copy of the accountDialog username field in register form
-    protected String newPasswordRestored;       // Copy of the accountDialog password field in register form
+    protected static DialogFragment accountDialog;                  // Dialog allowing the user to login/register
+    protected static TextView textView_activeCitizen_hello;         // TextView greeting users
+    protected static ProgressBar progressBar_activeCitizen_loading; // Loading ProgressBar
+    protected static RelativeLayout relativeLayout;                 // Layout. Used to change background_color
 
-    // Views of the account dialog, whose references are used to save and restore their values
-    protected EditText editText_existingUsername;
-    protected EditText editText_existingPassword;
-    protected EditText editText_newUsername;
-    protected EditText editText_newPassword;
+    protected void showDialog() {
+        accountDialog = accountAlertDialogFragment.newInstance();
+        accountDialog.show(getFragmentManager(), "account_dialog");
+    }
 
-    protected TextView textView_activeCitizen_hello;            // TextView greeting users
-    protected ProgressBar progressBar_activeCitizen_loading;    // Loading ProgressBar
+    public static class accountAlertDialogFragment extends DialogFragment {
+        public static accountAlertDialogFragment newInstance() {
+            return new accountAlertDialogFragment();
+        }
+        @Override
+        public void onCancel(DialogInterface dialog) {
+            getActivity().finish();
+        }
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+            return inflater.inflate(R.layout.dialog_account, container);
+        }
+        @Override
+        public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+            super.onViewCreated(view, savedInstanceState);
 
-    protected RelativeLayout relativeLayout;                    // Layout. Used to change background_color
+            final Activity activity = getActivity();
+            Button loginButton = (Button)view.findViewById(R.id.button_dialogAccount_login);
+            Button registerButton = (Button)view.findViewById(R.id.button_dialogAccount_register);
+            final EditText editText_existingUsername = (EditText) view.findViewById(R.id.editText_dialogAccount_existingUsername);
+            final EditText editText_existingPassword = (EditText) view.findViewById(R.id.editText_dialogAccount_existingPassword);
+            final EditText editText_newUsername = (EditText) view.findViewById(R.id.editText_dialogAccount_newUsername);
+            final EditText editText_newPassword = (EditText) view.findViewById(R.id.editText_dialogAccount_newPassword);
+
+            loginButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if(editText_existingUsername.getText().toString().isEmpty()){
+                        String message = "You must insert an username";
+                        Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                    } else if(editText_existingPassword.getText().toString().isEmpty()){
+                        String message = "You must insert a password";
+                        Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                    } else {
+                        login(activity, editText_existingUsername.getText().toString(), editText_existingPassword.getText().toString());
+                    }
+                }
+            });
+            registerButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if(editText_newUsername.getText().toString().isEmpty()){
+                        String message = "You must insert an username";
+                        Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                    } else if(editText_newPassword.getText().toString().isEmpty()) {
+                        String message = "You must insert a password";
+                        Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                    } else {
+                        register(activity, editText_newUsername.getText().toString(), editText_newPassword.getText().toString());
+                    }
+                }
+            });
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,32 +137,14 @@ public class ActiveCitizen extends AppCompatActivity {
 
     @Override
     protected void onResume() {
-        System.out.println("[DEBUG] onResume()");
         super.onResume();
-
-        if(fromConfigurationChange){
-            // A rotation has occurred
-            if(logged == 1){
-                // A rotation has occurred; the user is already logged; nothing has to be done
-                //System.out.println("[DEBUG] onResume after rotation. I dismiss the bar since logged=" + logged);
-                //progressBar_activeCitizen_loading.setVisibility(View.GONE);
-                //relativeLayout.setBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.default_background));
-                //getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-            } else {
-                // A rotation has occurred; the user is not logged yet; show loading dialog
-                //System.out.println("[DEBUG] onResume after rotation. I show the bar since logged=" + logged);
-                //progressBar_activeCitizen_loading.setVisibility(View.VISIBLE);
-                //relativeLayout.setBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.uninteractive_screen));
-                //getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-                  //      WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-            }
-        } else {
+        if(!fromConfigurationChange){
             // The application has been started from scratch
             if(logged == 0) {
                 // Just to avoid showing progressBar in case we go back to this activity from another one
                 if (username.equals("")) {
                     // The application has been just started, and no account informations exist on disk
-                    showAccountDialog(null);
+                    showDialog();
                 } else {
                     // The application has just been started, and account informations exist on disk
                     System.out.println("[DEBUG] application just started and stored data existing, I'll show the bar");
@@ -125,13 +152,15 @@ public class ActiveCitizen extends AppCompatActivity {
                             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
                     relativeLayout.setBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.uninteractive_screen));
                     progressBar_activeCitizen_loading.setVisibility(View.VISIBLE);
-                    login(username, password);
+                    login(this, username, password);
                 }
             }
         }
+        // TODO rimuovere
         System.out.println("[DEBUG] onResume(), user e pass e id sono " + username + ", " + password + ", " + userId);
     }
 
+    // TODO: i 3 successivi potro rimuoverli, alla fine
     @Override
     protected void onPause(){
         super.onPause();
@@ -152,26 +181,21 @@ public class ActiveCitizen extends AppCompatActivity {
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
+        // TODO print
         System.out.println("[DEBUG] onSaveInstanceState, logged vale " + logged);
         outState.putInt("logged", logged);
         outState.putInt("userid", userId);
         outState.putString("username", username);
         outState.putString("password", password);
-        if((editText_newUsername != null) && (accountDialog != null && accountDialog.isShowing())) {
-            outState.putString("new_username", editText_newUsername.getText().toString());
-            outState.putString("new_password", editText_newPassword.getText().toString());
-            outState.putString("existing_username", editText_existingUsername.getText().toString());
-            outState.putString("existing_password", editText_existingPassword.getText().toString());
-        } else {
-            //System.out.println("[DEBUG] newUsername is null, thus dialog field are not saved");
-        }
         super.onSaveInstanceState(outState);
     }
 
-    @Override public void onRestoreInstanceState(Bundle savedInstanceState){
+    @Override
+    public void onRestoreInstanceState(Bundle savedInstanceState){
         super.onRestoreInstanceState(savedInstanceState);
         if(savedInstanceState != null) {
             logged = savedInstanceState.getInt("logged", 100);
+            // TODO print
             System.out.println("[DEBUG] onRestoreInstanceState(), logged vale " + logged);
             userId = savedInstanceState.getInt("userid");
             username = savedInstanceState.getString("username");
@@ -180,89 +204,31 @@ public class ActiveCitizen extends AppCompatActivity {
             if(!username.equals("")){
                 textView_activeCitizen_hello.setText("Welcome, " + username);
             }
-            existingUsernameRestored = savedInstanceState.getString("existing_username");
-            existingPasswordRestored = savedInstanceState.getString("existing_password");
-            newUsernameRestored = savedInstanceState.getString("new_username");
-            newPasswordRestored = savedInstanceState.getString("new_password");
-            if(editText_newUsername != null) {
-                System.out.println("[DEBUG] editText_newUsername is not null!");
-                editText_existingUsername.setText(existingUsernameRestored);
-                editText_existingPassword.setText(existingPasswordRestored);
-                editText_newUsername.setText(newUsernameRestored);
-                editText_newPassword.setText(newPasswordRestored);
-            }
         }
     }
 
-    public void showAccountDialog(View v) {
-        LayoutInflater layoutInflater = LayoutInflater.from(this);
-        View inflater = layoutInflater.inflate(R.layout.dialog_account, null);
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setView(inflater);
-        //builder.setCancelable(false);
-        builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
-            @Override
-            public void onCancel(DialogInterface dialog) {
-                finish();
-            }
-        });
-        accountDialog = builder.show();
-
-        Button loginButton = (Button) inflater.findViewById(R.id.button_dialogAccount_login);
-        Button registerButton = (Button) inflater.findViewById(R.id.button_dialogAccount_register);
-        editText_existingUsername = (EditText) inflater.findViewById(R.id.editText_dialogAccount_existingUsername);
-        editText_existingPassword = (EditText) inflater.findViewById(R.id.editText_dialogAccount_existingPassword);
-        editText_newUsername = (EditText) inflater.findViewById(R.id.editText_dialogAccount_newUsername);
-        editText_newPassword = (EditText) inflater.findViewById(R.id.editText_dialogAccount_newPassword);
-        editText_existingUsername.setText(existingUsernameRestored);
-        editText_existingPassword.setText(existingPasswordRestored);
-        editText_newUsername.setText(newUsernameRestored);
-        editText_newPassword.setText(newPasswordRestored);
-
-        registerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(editText_newUsername.getText().toString().isEmpty()){
-                    Toast.makeText(getApplicationContext(), "You must insert an username", Toast.LENGTH_LONG).show();
-                } else {
-                    System.out.println("[DEBUG] I'm going to execute register method");
-                    register(editText_newUsername.getText().toString(),
-                            editText_newPassword.getText().toString());
-                }
-            }
-        });
-
-        loginButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(editText_existingUsername.getText().toString().isEmpty()){
-                    Toast.makeText(getApplicationContext(), "You must insert an username", Toast.LENGTH_LONG).show();
-                } else {
-                    login(editText_existingUsername.getText().toString(),
-                            editText_existingPassword.getText().toString());
-                }
-            }
-        });
-    }
-
-    private int login(final String existingUsername, final String existingPassword) {
+    protected static void login(final Activity activity, final String existingUsername, final String existingPassword) {
+        // TODO print
+        System.out.println("[DEBUG] login");
         String url = "http://www.activecitizen.altervista.org/login/";
         StringRequest postRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        System.out.println("[DEBUG] a response to the login operation arrived: " + response);
-                        // response
-                        Log.d("[DEBUG] Response", response);
                         if(response.equals("0")){
-                            Toast.makeText(getApplicationContext(), "Invalid username or password ", Toast.LENGTH_LONG).show();
-                            //if(loadingDialog != null && loadingDialog.isShowing()){
-                          //      loadingDialog.dismiss();
-                         //   }
-                            if(accountDialog != null && !(accountDialog.isShowing())) {
-                                showAccountDialog(null);
-                            }
+                            // TODO print
+                            // An exception occurred at the server
+                            System.out.println("[DEBUG] response equals 0");
+                            String message = "An error occurred while contacting the server";
+                            Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                        } else if(response.equals("-1")){
+                            // TODO print
+                            // The select returned no entries
+                            System.out.println("[DEBUG] response equals -1");
+                            String message = "Invalid username or password";
+                            Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
                         } else {
+                            // The inserted information were correct. The answer contains the account id
                             userId = Integer.parseInt(response);
                             username = existingUsername;
                             password = existingPassword;
@@ -272,20 +238,16 @@ public class ActiveCitizen extends AppCompatActivity {
                             editor.putString("username", username);
                             editor.putString("password", password);
                             editor.commit();
+                            // TODO print
                             System.out.println("[DEBUG] login successful, user e pass e id sono " + username + ", " + password + ", " + userId + ". logged is " + logged);
-                            System.out.println("[DEBUG] login(), sto per mandare in \"gone\" il dialog. " +
-                                    "Il riferimento alla ProgressBar vale " + progressBar_activeCitizen_loading);
+
                             textView_activeCitizen_hello.setText("Welcome, " + username);
                             progressBar_activeCitizen_loading.setVisibility(View.GONE);
-                            //relativeLayout.setBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.default_background));
-                            relativeLayout.setBackgroundColor(ContextCompat.getColor(getApplicationContext(), android.R.color.background_light));
-                            //android:colorBackground;
-
-
-                            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-                            if(accountDialog != null) {
-                                System.out.println("[DEBUG] in login, I'm going to dismiss accountDialog");
-                                accountDialog.dismiss();
+                            relativeLayout.setBackgroundColor(ContextCompat.getColor(activity.getApplicationContext(), android.R.color.background_light));
+                            activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                            if((ActiveCitizen.accountDialog != null)&&(ActiveCitizen.accountDialog.isResumed())) {
+                                // the login happened by means of account dialog, that now must be closed
+                                ActiveCitizen.accountDialog.dismiss();
                             }
                         }
                     }
@@ -293,15 +255,12 @@ public class ActiveCitizen extends AppCompatActivity {
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        //TODO: ricordarsi di gestire questo caso: devo rimuovere il dialogo
-                        // error
-                        String message = "Server unreachable. Check your internet connection";
-                        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                      //  if(loadingDialog != null && loadingDialog.isShowing()){
-                     //      loadingDialog.dismiss();
-                     //   }
-                        finish();
-                        Log.d("[DEBUG] Error.Response", error.toString());
+                        // GoogleVolley error, e.g. timeout happens when connection is not available
+                        // TODO print
+                        System.out.println("[DEBUG] onErrorResponse");
+                        String message = "Connection unavailable";
+                        Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                        activity.finish();
                     }
                 }
         ) {
@@ -314,22 +273,28 @@ public class ActiveCitizen extends AppCompatActivity {
             }
         };
         queue.add(postRequest);
-        return 0;
     }
 
-    private int register(final String newUsername, final String newPassword){
+    protected static void register(final Activity activity, final String newUsername, final String newPassword){
+        // TODO print
         String url = "http://www.activecitizen.altervista.org/register/";
         StringRequest postRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        System.out.println("[DEBUG] a response to the login operation arrived");
-                        // response
-                        Log.d("[DEBUG] Response", response);
-                        if(response.equals("0")){
-                            Toast.makeText(getApplicationContext(), "Username already used, choose another", Toast.LENGTH_LONG).show();
+                        if(response.equals("0")) {
+                            // An exception occurred at the server
+                            System.out.println("[DEBUG] response equals 0");
+                            String message = "An error occurred while contacting the server";
+                            Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                        } else if(response.equals("-1")){
+                            // There already exists an account with that username
+                            String message = "Username already used, choose another";
+                            Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
                         } else {
-                            Toast.makeText(getApplicationContext(), "Account created successfully", Toast.LENGTH_LONG).show();
+                            // There was no account with that name. Registration succeded.
+                            String message = "Account created successfully";
+                            Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
                             userId = Integer.parseInt(response);
                             username = newUsername;
                             password = newPassword;
@@ -339,20 +304,21 @@ public class ActiveCitizen extends AppCompatActivity {
                             editor.putString("username", username);
                             editor.putString("password", password);
                             editor.commit();
-                            System.out.println("[DEBUG] registration successful, user e pass e id sono " + username + ", " + password + ", " + userId);
-                            if(accountDialog != null) {
-                                System.out.println("[DEBUG] in registration, I'm going to dismiss accountDialog");
+                            // TODO print
+                            //System.out.println("[DEBUG] registration successful, user e pass e id sono " + username + ", " + password + ", " + userId);
+                            if((accountDialog != null)&&(accountDialog.isResumed())) {
                                 accountDialog.dismiss();
                             }
-                            //dialog.cancel();
                         }
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        // error
-                        Log.d("[DEBUG] Error.Response", error.toString());
+                        // GoogleVolley error, e.g. timeout happens when connection is not available
+                        String message = "Connection unavailable";
+                        Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                        activity.finish();
                     }
                 }
         ) {
@@ -365,7 +331,6 @@ public class ActiveCitizen extends AppCompatActivity {
             }
         };
         queue.add(postRequest);
-        return 0;
     }
 
     public void launchReportAnIssue(View v) {
@@ -373,6 +338,7 @@ public class ActiveCitizen extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), "Account error", Toast.LENGTH_LONG).show();
             finish();
         }
+        // TODO print
         System.out.println("[DEBUG] Sending an intent to ReportAnIssue");
         Intent i = new Intent(this, ReportAnIssue.class);
         i.putExtra("user_id", userId);
@@ -402,6 +368,7 @@ public class ActiveCitizen extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.logout:
+                // TODO print
                 System.out.println("[DEBUG] logout pressed");
                 userId = 0;
                 username = "";
@@ -412,10 +379,11 @@ public class ActiveCitizen extends AppCompatActivity {
                 editor.putString("username", "");
                 editor.putString("password", "");
                 editor.commit();
-                showAccountDialog(null);
+                showDialog();
                 logged = 0;
                 return true;
             case R.id.settings:
+                // TODO print
                 System.out.println("[DEBUG] settings pressed");
                 return true;
             default:

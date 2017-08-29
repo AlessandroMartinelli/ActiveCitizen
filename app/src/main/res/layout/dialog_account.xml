@@ -26,6 +26,7 @@
             android:layout_height="wrap_content"
             android:layout_below="@id/textView_dialogAccount_welcome"
             android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
+            android:layout_centerHorizontal="true"
             android:textSize="@dimen/normal_text_size"
             android:text="Please login to use Active Citizen"
             />
