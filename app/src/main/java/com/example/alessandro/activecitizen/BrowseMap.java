@@ -1,3 +1,5 @@
+
+
 package com.example.alessandro.activecitizen;
 
 import android.app.Activity;
@@ -124,7 +126,8 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
         }
     }
 
-    protected void getReportDetails(final Report r){
+    protected void getReportDetails(final Marker marker){
+        final Report r = (Report)marker.getTag();
         url = "http://www.activecitizen.altervista.org/get_report_details/";
         System.out.println("[DEBUG] inside retrieveReportDetails_v1 for " + r.reportTitle +
                 "; userId is " + userId + "; your_rate is " + r.your_rate);
@@ -170,7 +173,7 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                                 System.out.println("[DEBUG] Images correctly decoded");
                                 r.reportImage = b;
                             }
-                            showReportDialog(r);
+                            showReportDialog(marker);
                         }
                     }
                 },
@@ -267,7 +270,8 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
         // with all information abount this report.
     }
 
-    protected void showReportDialog(final Report report) {
+    protected void showReportDialog(final Marker marker) {
+        final Report report = (Report)marker.getTag();
         LayoutInflater layoutInflater = LayoutInflater.from(this);
         View inflater = layoutInflater.inflate(R.layout.dialog_report, null);
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -315,6 +319,14 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                                 if (response.equals("-1")) {
                                     System.out.println("[DEBUG] response is 0 :c");
                                 } else {
+                                    report.your_rate = rating.getRating();
+                                    if(report.authorId != userId){
+                                        // If the report has been issued by the user,
+                                        // its color its already HUE_AZURE, no need
+                                        // to modifying it
+                                        marker.setIcon(BitmapDescriptorFactory.
+                                                defaultMarker(BitmapDescriptorFactory.HUE_ORANGE));
+                                    }
                                     System.out.println("[DEBUG] response is " + response);
                                     String message = "Report voted successfully";
                                     Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
@@ -560,12 +572,12 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                                         if(r.reportImage != null){
                                             System.out.println("[DEBUG] reportImage already stored, no need to download it again");
                                             // TODO: r.showDetailedView();
-                                            showReportDialog(r);
+                                            showReportDialog(marker);
                                         } else {
                                             // Request the full details to the server
                                             System.out.println("[DEBUG] I'm going to retrieve the details of " + r.reportTitle);
                                             // TODO qui forse dovrei passare anche il marker, così che, se opportuno, venga colorato
-                                            getReportDetails(r);
+                                            getReportDetails(marker);
                                         }
                                     }
                                 });

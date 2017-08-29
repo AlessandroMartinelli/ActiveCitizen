@@ -7,4 +7,6 @@
     <color name="dangerousAnswer">#ef2626</color>
     <color name="saveAnswer">#00BF65</color>
     <color name="hint">#808080</color>
+    <color name="uninteractive_screen">#bcbcbc</color>
+    <color name="default_background">#fafafa</color>
 </resources>
