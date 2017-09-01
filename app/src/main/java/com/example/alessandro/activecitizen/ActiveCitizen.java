@@ -2,9 +2,13 @@ package com.example.alessandro.activecitizen;
 
 import android.app.Activity;
 import android.app.DialogFragment;
+import android.app.Fragment;
+import android.app.FragmentTransaction;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.preference.PreferenceActivity;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -33,8 +37,6 @@ import com.android.volley.toolbox.Volley;
 import java.util.HashMap;
 import java.util.Map;
 
-import static android.R.id.message;
-
 public class ActiveCitizen extends AppCompatActivity {
 
     protected static RequestQueue queue;               // The queue of requests to be sent to the server
@@ -45,21 +47,24 @@ public class ActiveCitizen extends AppCompatActivity {
     protected static String password;                  // Account password
     protected static SharedPreferences preferences;    // Preferences permanently storing account data
     protected boolean fromConfigurationChange;  // Stores whether the activity was created after a configuration change
-    static int logged;                          // Stores whether the user is logged
+    protected static int logged;                          // Stores whether the user is logged
+    protected static int progressBarShown;
+    protected static boolean confirmExit;
 
     protected static DialogFragment accountDialog;                  // Dialog allowing the user to login/register
     protected static TextView textView_activeCitizen_hello;         // TextView greeting users
     protected static ProgressBar progressBar_activeCitizen_loading; // Loading ProgressBar
     protected static RelativeLayout relativeLayout;                 // Layout. Used to change background_color
+    protected static Button button_logout;                          // Button used in order to logout
 
     protected void showDialog() {
-        accountDialog = accountAlertDialogFragment.newInstance();
+        accountDialog = AccountAlertDialogFragment.newInstance();
         accountDialog.show(getFragmentManager(), "account_dialog");
     }
 
-    public static class accountAlertDialogFragment extends DialogFragment {
-        public static accountAlertDialogFragment newInstance() {
-            return new accountAlertDialogFragment();
+    public static class AccountAlertDialogFragment extends DialogFragment {
+        public static AccountAlertDialogFragment newInstance() {
+            return new AccountAlertDialogFragment();
         }
         @Override
         public void onCancel(DialogInterface dialog) {
@@ -112,17 +117,28 @@ public class ActiveCitizen extends AppCompatActivity {
         }
     }
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+        System.out.println("[DEBUG] onCreate");
+
 
         // Initializations
-        setContentView(R.layout.activity_active_citizen);
+        Settings.setActivityTheme(this);
         queue = Volley.newRequestQueue(this);
-        preferences = getSharedPreferences("account_information", MODE_PRIVATE);
+
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_active_citizen);
+
+        preferences = getPreferences(MODE_PRIVATE);
+        //String themeId = preferences.getString("application_theme", "");
+        //System.out.println("[DEBUG] themeID is" + themeId);
+
         textView_activeCitizen_hello = (TextView) findViewById(R.id.textView_activeCitizen_hello);
         progressBar_activeCitizen_loading = (ProgressBar) findViewById(R.id.progressBar_activeCitizen_loading);
-        relativeLayout = (RelativeLayout) findViewById(R.id.relativeLayout_active_citizen);
+        relativeLayout = (RelativeLayout) findViewById(R.id.relativeLayout_activeCitizen);
+        button_logout = (Button) findViewById(R.id.button_activeCitizen_logout);
         logged = 0;
 
         // Retrieves account informations from non-volatile memory
@@ -138,7 +154,13 @@ public class ActiveCitizen extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if(!fromConfigurationChange){
+        System.out.println("[DEBUG] onResume, fromConfigurationChange is " + fromConfigurationChange);
+        if(fromConfigurationChange){
+            System.out.println("[DEBUG] onResume, progressBarShown is " + progressBarShown);
+            if(progressBarShown == 1){
+                showProgressBar(this, true);
+            }
+        } else {
             // The application has been started from scratch
             if(logged == 0) {
                 // Just to avoid showing progressBar in case we go back to this activity from another one
@@ -148,10 +170,7 @@ public class ActiveCitizen extends AppCompatActivity {
                 } else {
                     // The application has just been started, and account informations exist on disk
                     System.out.println("[DEBUG] application just started and stored data existing, I'll show the bar");
-                    getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-                            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-                    relativeLayout.setBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.uninteractive_screen));
-                    progressBar_activeCitizen_loading.setVisibility(View.VISIBLE);
+                    showProgressBar(this, true);
                     login(this, username, password);
                 }
             }
@@ -160,11 +179,30 @@ public class ActiveCitizen extends AppCompatActivity {
         System.out.println("[DEBUG] onResume(), user e pass e id sono " + username + ", " + password + ", " + userId);
     }
 
+
+
     // TODO: i 3 successivi potro rimuoverli, alla fine
     @Override
     protected void onPause(){
         super.onPause();
         System.out.println("[DEBUG] onPause()");
+    }
+
+
+    protected static void showProgressBar(Activity activity, boolean doIHaveToShow) {
+        if(doIHaveToShow) {
+            activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+            relativeLayout.setBackgroundColor(ContextCompat.getColor(activity.getApplicationContext(), R.color.uninteractive_screen));
+            progressBar_activeCitizen_loading.setVisibility(View.VISIBLE);
+            progressBarShown = 1;
+        } else {
+            //progressBar_activeCitizen_loading = (ProgressBar) activity.findViewById(R.id.progressBar_activeCitizen_loading);
+            progressBar_activeCitizen_loading.setVisibility(View.GONE);
+            relativeLayout.setBackgroundColor(ContextCompat.getColor(activity.getApplicationContext(), android.R.color.background_light));
+            activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+            progressBarShown = 0;
+        }
     }
 
     @Override
@@ -187,6 +225,7 @@ public class ActiveCitizen extends AppCompatActivity {
         outState.putInt("userid", userId);
         outState.putString("username", username);
         outState.putString("password", password);
+        outState.putInt("progressBarShown", progressBarShown);
         super.onSaveInstanceState(outState);
     }
 
@@ -195,6 +234,7 @@ public class ActiveCitizen extends AppCompatActivity {
         super.onRestoreInstanceState(savedInstanceState);
         if(savedInstanceState != null) {
             logged = savedInstanceState.getInt("logged", 100);
+            progressBarShown = savedInstanceState.getInt("progressBarShown", 0);
             // TODO print
             System.out.println("[DEBUG] onRestoreInstanceState(), logged vale " + logged);
             userId = savedInstanceState.getInt("userid");
@@ -234,7 +274,7 @@ public class ActiveCitizen extends AppCompatActivity {
                             password = existingPassword;
                             logged = 1;
                             SharedPreferences.Editor editor = preferences.edit();
-                            editor.putInt("userid", userId);
+                            //editor.putInt("userid", userId);
                             editor.putString("username", username);
                             editor.putString("password", password);
                             editor.commit();
@@ -242,12 +282,18 @@ public class ActiveCitizen extends AppCompatActivity {
                             System.out.println("[DEBUG] login successful, user e pass e id sono " + username + ", " + password + ", " + userId + ". logged is " + logged);
 
                             textView_activeCitizen_hello.setText("Welcome, " + username);
-                            progressBar_activeCitizen_loading.setVisibility(View.GONE);
-                            relativeLayout.setBackgroundColor(ContextCompat.getColor(activity.getApplicationContext(), android.R.color.background_light));
-                            activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                            button_logout.setVisibility(View.VISIBLE);
+                            showProgressBar(activity, false);
+
                             if((ActiveCitizen.accountDialog != null)&&(ActiveCitizen.accountDialog.isResumed())) {
                                 // the login happened by means of account dialog, that now must be closed
                                 ActiveCitizen.accountDialog.dismiss();
+                            } else {
+                                // TODO controllare se fosse sufficiente utilizzare solo la parte qui sotto
+                                DialogFragment dialogFragment = (DialogFragment)activity.getFragmentManager().findFragmentByTag("account_dialog");
+                                if (dialogFragment != null) {
+                                    dialogFragment.dismiss();
+                                }
                             }
                         }
                     }
@@ -258,7 +304,7 @@ public class ActiveCitizen extends AppCompatActivity {
                         // GoogleVolley error, e.g. timeout happens when connection is not available
                         // TODO print
                         System.out.println("[DEBUG] onErrorResponse");
-                        String message = "Connection unavailable";
+                        String message = "Connection error";
                         Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
                         activity.finish();
                     }
@@ -299,8 +345,9 @@ public class ActiveCitizen extends AppCompatActivity {
                             username = newUsername;
                             password = newPassword;
                             textView_activeCitizen_hello.setText("Welcome, " + username);
+                            button_logout.setVisibility(View.VISIBLE);
                             SharedPreferences.Editor editor = preferences.edit();
-                            editor.putInt("userid", userId);
+                            //editor.putInt("userid", userId);
                             editor.putString("username", username);
                             editor.putString("password", password);
                             editor.commit();
@@ -316,7 +363,7 @@ public class ActiveCitizen extends AppCompatActivity {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         // GoogleVolley error, e.g. timeout happens when connection is not available
-                        String message = "Connection unavailable";
+                        String message = "Connection error";
                         Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
                         activity.finish();
                     }
@@ -356,6 +403,23 @@ public class ActiveCitizen extends AppCompatActivity {
         startActivity(i);
     }
 
+    public void logout(View v){
+        // TODO print
+        System.out.println("[DEBUG] logout pressed");
+        userId = 0;
+        username = "";
+        password = "";
+        button_logout.setVisibility(View.GONE);
+        textView_activeCitizen_hello.setText("");
+        SharedPreferences.Editor editor = preferences.edit();
+        //editor.putInt("userid", 0);
+        editor.putString("username", "");
+        editor.putString("password", "");
+        editor.commit();
+        showDialog();
+        logged = 0;
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
@@ -367,22 +431,11 @@ public class ActiveCitizen extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.logout:
-                // TODO print
-                System.out.println("[DEBUG] logout pressed");
-                userId = 0;
-                username = "";
-                password = "";
-                textView_activeCitizen_hello.setText("");
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putInt("userid", 0);
-                editor.putString("username", "");
-                editor.putString("password", "");
-                editor.commit();
-                showDialog();
-                logged = 0;
-                return true;
             case R.id.settings:
+                Intent i = new Intent(this, Settings.class);
+                startActivity(i);
+                return true;
+            case R.id.about:
                 // TODO print
                 System.out.println("[DEBUG] settings pressed");
                 return true;

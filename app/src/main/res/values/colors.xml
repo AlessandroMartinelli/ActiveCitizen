@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimary">#3f51b5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
     <color name="positiveAnswer">#098FD8</color>
     <color name="dangerousAnswer">#ef2626</color>
     <color name="saveAnswer">#00BF65</color>
+    <color name="loadAnswer">#e2e53b</color>
+    <color name="yellow">#f1f442</color>
     <color name="hint">#808080</color>
     <color name="uninteractive_screen">#bcbcbc</color>
     <color name="default_background">#fafafa</color>

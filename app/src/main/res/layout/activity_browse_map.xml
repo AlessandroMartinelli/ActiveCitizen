@@ -1,50 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/relativeLayout_browseMap"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
     <fragment
         android:id="@+id/coordinates_map"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         class="com.google.android.gms.maps.MapFragment"/>
-    <LinearLayout
-        android:id="@+id/linearLayout_confirm"
-        android:layout_width="match_parent"
+    <Button
+        android:id="@+id/button_browseMap_track"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_margin="5dip"
-        android:visibility="gone">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="@dimen/normal_text_size"
-            android:text="The choosen point has coordinates:"/>
-        <TextView
-            android:id="@+id/textView_coordinatesToBeConfirmed"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="@dimen/normal_text_size" />
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:text="confirm"
-            android:onClick="ok"/>
-    </LinearLayout>
-    <LinearLayout
-        android:id="@+id/linearLayout_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="5dip"
-        android:orientation="vertical">
-        <Button
-            android:id="@+id/currentPositionButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="right"
-            android:text="center map"
-            android:onClick="centerMap"/>
-    </LinearLayout>
-</LinearLayout>
+        android:text="Track"
+        android:onClick="commuteTracking"
+        />
+
+</RelativeLayout>

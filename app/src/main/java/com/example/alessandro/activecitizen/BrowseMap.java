@@ -1,4 +1,5 @@
-
+// TODO nella onPause devo togliere eventuali richieste di posizione pendenti
+// TODO gestire il tasto back quando c'e' un marker aperto, in tal caso bisognerebbe semplicemente chidere il marker, non l'intera applicazione
 
 package com.example.alessandro.activecitizen;
 
@@ -13,16 +14,20 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RatingBar;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,6 +43,7 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -62,25 +68,25 @@ import static java.lang.Integer.parseInt;
 
 public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener, LocationListener {
 
-    private LocationManager locationManager;
-    private GoogleMap gmap;
-    private LatLng manuallySelectedCoordinates;
-    private LatLng currentCoordinates;
-    private String provider;
-    private Criteria criteria;
+    protected LocationManager locationManager;          // TODO questo penso non serva più, idem i provider e i criteria
+    protected GoogleMap gmap;
+    protected LatLng manuallySelectedCoordinates;
+    protected LatLng currentCoordinates;
+    protected String provider;
+    protected Criteria criteria;
 
-    private LinearLayout ll_confirm;
-    private LinearLayout ll_button;
+    protected boolean manually_select_coordinates;      // true if the activity has been started from ReportAnIssuue activity
 
-    private boolean manually_select_coordinates;
-
-    private int userId;
-    private RequestQueue queue;
-    private String url;
-    private ProgressDialog loadingDialog;
+    protected int userId;
+    protected RequestQueue queue;
+    protected ProgressDialog loadingDialog;
+    protected ProgressBar progressBar_loading;          // Loading ProgressBar
+    protected int progressBarShown;
     //private ReportList reportList;
 
-    private AlertDialog reportDialog;
+    protected AlertDialog reportDialog;
+    protected RelativeLayout relativeLayout;
+
 
     /**
      * Retrieve the Bitmap codified in the given String
@@ -98,11 +104,30 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
         }
     }
 
-    /*
- * Utility method used for retrieving the String corresponding
- * to the category choosen by means of the spinner.
- * Case 0 means no choice has been done.
- */
+    protected void showProgressBar(Activity activity, boolean doIHaveToShow) {
+        if(doIHaveToShow) {
+            activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+            relativeLayout.setBackgroundColor(ContextCompat.getColor(activity.getApplicationContext(), R.color.uninteractive_screen));
+            progressBar_loading.setVisibility(View.VISIBLE);
+            progressBarShown = 1;
+        } else {
+            //progressBar_activeCitizen_loading = (ProgressBar) activity.findViewById(R.id.progressBar_activeCitizen_loading);
+            progressBar_loading.setVisibility(View.GONE);
+            relativeLayout.setBackgroundColor(ContextCompat.getColor(activity.getApplicationContext(), android.R.color.background_light));
+            activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+            progressBarShown = 0;
+        }
+    }
+
+    /**
+     * Utility method used for retrieving the String corresponding
+     * to the category choosen by means of the spinner.
+     * Case 0 means no choice has been done.
+     *
+     * @param categoryIndex an index representing the choosen category
+     * @return return a string representing the category
+     */
     protected String categoryIndexToString(int categoryIndex){
         switch (categoryIndex){
             case 0:
@@ -128,7 +153,7 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
 
     protected void getReportDetails(final Marker marker){
         final Report r = (Report)marker.getTag();
-        url = "http://www.activecitizen.altervista.org/get_report_details/";
+        String url = "http://www.activecitizen.altervista.org/get_report_details/";
         System.out.println("[DEBUG] inside retrieveReportDetails_v1 for " + r.reportTitle +
                 "; userId is " + userId + "; your_rate is " + r.your_rate);
         StringRequest postRequest = new StringRequest(Request.Method.POST, url,
@@ -136,41 +161,26 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                     @Override
                     public void onResponse(String response) {
                         if (response.equals("0")) {
-                            System.out.println("[DEBUG] response is 0 :c");
+                            String message = "An error occurred while contacting the server";
+                            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                        } else if(response.equals("-1")) {
+                            String message = "Error in retrieving the report";
+                            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
                         } else {
-                            //System.out.println("[DEBUG] there is a response! c:");
-                            //System.out.println("[DEBUG] raw response: " + response);
-                            //response = response.substring(1, (response.length() - 1));
-                            //System.out.println("[DEBUG] modified response: " + response);
-
                             try {
                                 JSONObject jObject = new JSONObject("{output:" + response + "}");
-                                //System.out.println("[DEBUG] first step passed");
                                 response = jObject.getString("output");
-                                //System.out.println("[DEBUG] parsed string is " + response);
                             }
                             catch (org.json.JSONException e){
-                                e.printStackTrace();
-                                //e.printStackTrace(System.out);
-                                //System.out.println("[DEBUG] exception: " + e.getStackTrace().);
-                                //System.out.println("[DEBUG] exception: " + e.getMessage());
-                                //System.out.println("[DEBUG] exception: " + e.getCause().toString());
+                                String message = "Error while decoding the report";
+                                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
                             }
-
-
-                            //System.out.println("[DEBUG] sto per splittare la stringa");
                             String[] field = response.split("~");
-                            System.out.println("[DEBUG] date, expressed as a string, is " + field[1]);
                             r.reportAuthor = field[0];
-                                r.reportDate = field[1];
+                            r.reportDate = field[1];
                             r.reportDetails = field[2];
-                            System.out.println("[DEBUG] report description is " + r.reportDetails);
-                            //System.out.println("[DEBUG] recovered imageString length is " + field[3].length());
                             Bitmap b = StringToBitMap(field[3]);
-                            if(b == null){
-                                System.out.println("[DEBUG] Error in decoding the image");
-                            } else {
-                                System.out.println("[DEBUG] Images correctly decoded");
+                            if(b != null){
                                 r.reportImage = b;
                             }
                             showReportDialog(marker);
@@ -180,14 +190,14 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        System.out.println("[DEBUG] onErrorResponse. Error is " + error.getMessage());
+                        String message = "Connection error";
+                        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
                     }
                 })
         {
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String>  params = new HashMap<String, String>();
-                params.put("action", "get_report_details");
                 params.put("report_id", "" + r.reportId);
                 return params;
             }
@@ -386,8 +396,11 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
+        Settings.setActivityTheme(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_browse_map);
+
+        relativeLayout = (RelativeLayout) findViewById(R.id.relativeLayout_browseMap);
 
         if(savedInstanceState == null){
             // The activity has been started, this is not a rotation, since
@@ -418,14 +431,12 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                 finish();
             }
             queue = Volley.newRequestQueue(this);
-            url = "http://www.activecitizen.altervista.org";
-            //reportList = new ReportList();
             getReportIndex();
         } else {
             // The activity was started through "manually select coordinates"
             manually_select_coordinates = true;
-            ll_confirm = (LinearLayout) findViewById(R.id.linearLayout_confirm);
-            ll_button = (LinearLayout) findViewById(R.id.linearLayout_button);
+            //ll_confirm = (LinearLayout) findViewById(R.id.linearLayout_confirm);
+            //ll_button = (LinearLayout) findViewById(R.id.linearLayout_button);
         }
 
     }
@@ -434,43 +445,107 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
     public void onLocationChanged(Location location){
         System.out.println("[DEBUG] onLocationChanged inizia qua");
         currentCoordinates = new LatLng (location.getLatitude(), location.getLongitude());
-        if(gmap != null) {
-            gmap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentCoordinates, 15));
+/*
+        CircleOptions circleOptions = new CircleOptions();
+        circleOptions.center(currentCoordinates);
+        circleOptions.radius(20);
+        circleOptions.fillColor(0xff7ae6ff);
+        gmap.addCircle(circleOptions);
+
+        CircleOptions circleOptions2 = new CircleOptions();
+        circleOptions2.center(currentCoordinates);
+        circleOptions2.radius(20);
+        circleOptions2.fillColor(0x007ae6ff);
+        gmap.addCircle(circleOptions2);
+*/
+/*
+        CircleOptions circleOptions3 = new CircleOptions();
+        circleOptions3.center(currentCoordinates);
+        circleOptions3.radius(20);
+        circleOptions3.fillColor(0xff35bfdd);
+        circleOptions3.strokeColor(0xffffffff);
+        gmap.addCircle(circleOptions3);
+*/
+        gmap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentCoordinates, 15));
+
+        // TODO: penso che dovrei fare la seguente cosa: in manual coordinates, non interessa la
+        // posizione corrente: stiamo usando tale metodo invece che "retrieve current location"
+        // proprio perche' la segnalazione non e' nella posizione corrente.
+        //Caprioli
+
+    }
+
+    public void commuteTracking(View v){
+        Button button = (Button)findViewById(R.id.button_browseMap_track);
+        if(!gmap.isMyLocationEnabled()) {
+            gmap.setMyLocationEnabled(true);
+            button.setText("Stop Tracking");
+        } else {
+            gmap.setMyLocationEnabled(false);
+            button.setText("Track");
         }
     }
+
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         gmap = googleMap;
         if(manually_select_coordinates == true) {
             gmap.setOnMapClickListener(this);
+
+            /*
+            gmap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+                @Override
+                public boolean onMarkerClick(Marker marker) {
+                    marker.showInfoWindow();
+                    return true;
+                }
+            });
+            */
+
+            gmap.setOnInfoWindowClickListener(new OnInfoWindowClickListener() {
+                @Override
+                public void onInfoWindowClick(Marker marker) {
+                    ok(null);
+                }
+            });
         }
-        //centerMap(null);
-        System.out.println("[DEBUG] map type is " + gmap.getMapType());
-        String message = "Wait a few seconds for the map to be centered...";
-        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
         //getUiSettings
         UiSettings settings = gmap.getUiSettings();
         settings.setZoomControlsEnabled(true);
+        // TODO check permission
+
     }
 
     @Override
     public void onMapClick(LatLng clickedCoordinates){
+        // TODO centrare la mappa sulle coordinate corrent
         manuallySelectedCoordinates = clickedCoordinates;
         gmap.clear();
+        gmap.animateCamera(CameraUpdateFactory.newLatLng(manuallySelectedCoordinates));
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(manuallySelectedCoordinates);
-        gmap.addMarker(markerOptions);
+        markerOptions.title("click here to confirm coordinates");
+        markerOptions.snippet(manuallySelectedCoordinates.latitude + ", " +
+                manuallySelectedCoordinates.longitude);
+        Marker marker = gmap.addMarker(markerOptions);
+        marker.showInfoWindow();
 
+        // TODO c'e' da chiamare "ok"
+
+        /*
         TextView tv = (TextView) findViewById(R.id.textView_coordinatesToBeConfirmed);
         tv.setText(manuallySelectedCoordinates.latitude + ", " +
                 manuallySelectedCoordinates.longitude);
         ll_button.setVisibility(View.GONE);
         ll_confirm.setVisibility(View.VISIBLE);
+        */
     }
 
     public void centerMap(View v){
         locationManager.requestSingleUpdate(provider, this, null);
+        String message = "Wait a few seconds for the map to be centered...";
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
 
     public void ok(View v){
@@ -491,6 +566,8 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
 
     //TODO: al momento, se non ci sono segnalazioni, crasha.
     protected void getReportIndex() {
+        // TODO qui potrei fare una progress bar che raggiunge il 50% dopo aver scaricato
+        // tutto e poi sale gradualmente.
         url= "http://www.activecitizen.altervista.org/get_report_index/";
         System.out.println("[DEBUG] inside the getReportIndex");
         StringRequest postRequest = new StringRequest(Request.Method.POST, url,
@@ -615,6 +692,7 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
 
     //TODO: onback, se sta venendo mostrato il popup, va nascosto.
 
+    /*
     @Override
     public void onBackPressed(){
         if(manually_select_coordinates == true){
@@ -630,6 +708,7 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
         }
 
     }
+    */
 
 
     @Override

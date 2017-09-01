@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -16,18 +17,22 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.RatingBar;
+import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -61,19 +66,18 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     static final int LOCATION_PERMISSION = 3;
     static final int PICK_PHOTO = 4;
 
-    // TODO: turn all private into protected
     protected int userId;
     protected Intent startingIntent;
 
     protected LocationManager locationManager;
     protected Criteria criteria;
     protected String locationProvider;
-    protected static String detailsDialogContent; //TODO: needs to be static?
     protected ProgressDialog loadingDialog;
 
     protected RequestQueue queue;
     protected String url;
 
+    protected SharedPreferences preferences;
     protected LatLng latLng;
     protected Bitmap imageBitmap;
     protected String imageString;
@@ -83,10 +87,12 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     protected EditText reportTitle;
     protected Spinner reportCategory;
     protected EditText reportDetails;
-    protected EditText dialogDetails;
     protected ImageView photoPreview;
     protected Button buttonAddPhoto;
     protected RatingBar ratingBar;
+    protected static ProgressBar progressBar_reportAnIssue_loading; // Loading ProgressBar
+    protected static RelativeLayout relativeLayout;                 // Layout. Used to change background_color
+    protected int progressBarShown;
 
     /**
      * Method used for codifying a Bitmap into a String. The String will be
@@ -100,6 +106,18 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         byte [] b=baos.toByteArray();
         String temp= Base64.encodeToString(b, Base64.DEFAULT);
         return temp;
+    }
+
+    // TODO se non viene usata la posso eliminare
+    public Bitmap StringToBitMap(String encodedString){
+        try {
+            byte [] encodeByte= Base64.decode(encodedString,Base64.DEFAULT);
+            Bitmap bitmap= BitmapFactory.decodeByteArray(encodeByte, 0, encodeByte.length);
+            return bitmap;
+        } catch(Exception e) {
+            e.getMessage();
+            return null;
+        }
     }
 
     public String stringFromLatLng(LatLng latLng) {
@@ -124,14 +142,6 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         return new LatLng(location.getLatitude(), location.getLongitude());
     }
 
-    //public void showShortToast(String message){
-    //    Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
-    //}
-
-    //public void showLongToast(String message){
-    //    Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
-    //}
-
     protected void initializeLocationProvider(){
         criteria.setAccuracy(Criteria.ACCURACY_FINE);
         locationProvider = locationManager.getBestProvider(criteria, true);
@@ -139,6 +149,8 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Settings.setActivityTheme(this);
+        // TODO print
         System.out.println("[DEBUG] onCreate()");
 
         super.onCreate(savedInstanceState);
@@ -146,6 +158,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
 
         queue = Volley.newRequestQueue(this);
         url = "http://www.activecitizen.altervista.org/send_report/";
+        preferences = getPreferences(MODE_PRIVATE);
 
         currentLocation = (TextView) findViewById(R.id.textView_currentLocation);
         reportTitle = (EditText) findViewById(R.id.editText_insertTitle);
@@ -154,65 +167,78 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         photoPreview = (ImageView) findViewById(R.id.imageView_photoPreview);
         buttonAddPhoto = (Button) findViewById(R.id.button_addPhoto);
         ratingBar = (RatingBar) findViewById(R.id.ratingBar_priority);
+        progressBar_reportAnIssue_loading = (ProgressBar) findViewById(R.id.progressBar_reportAnIssue_loading);
+        relativeLayout = (RelativeLayout) findViewById(R.id.relativeLayout_reportAnIssue);
+        progressBarShown = 0;
 
+        // Initialize the spinner used for choosing a category
         CharSequence[] categories = getResources().getStringArray(categories_array);
         ArrayAdapter<CharSequence> arrayAdapter = new ArrayAdapter<CharSequence>(this,
                 android.R.layout.simple_spinner_dropdown_item, categories);
         reportCategory.setAdapter(arrayAdapter);
         reportCategory.setOnItemSelectedListener(this);
-        category = 0; // poi occorrerà save instance state e restore
+        category = 0; // TODO poi occorrerà save instance state e restore
 
         startingIntent = getIntent();
         userId = startingIntent.getIntExtra("user_id", 0);
-        if(userId == 0){
-            Toast.makeText(getApplicationContext(), "Account error", Toast.LENGTH_LONG).show();
-            finish();
-        }
+        // TODO print
         System.out.println("[DEBUG] onCreate() userId retrieved from intent is " + userId);
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         criteria = new Criteria();
-        detailsDialogContent = new String("");
     }
 
     @Override
     protected void onResume() {
+        // TODO print
         System.out.println("[DEBUG] onResume()");
 
         super.onResume();
         initializeLocationProvider();
         System.out.println("[DEBUG] locationProvider is this " + locationProvider);
+
+        System.out.println("[DEBUG] onResume, progressBarShown is " + progressBarShown);
+        if(progressBarShown == 1){
+            showProgressBar(true);
+        }
     }
 
     @Override
     protected void onPause() {
+        // TODO print
         System.out.println("[DEBUG] onPause()");
         super.onPause();
-        locationManager.removeUpdates(this); // forse andrebbe in onStop?
+        locationManager.removeUpdates(this);
     }
 
     @Override
     protected void onStop(){
+        // TODO print
         System.out.println("[DEBUG] onStop()");
         super.onStop();
     }
 
     @Override
     protected void onDestroy(){
+        // TODO print
         System.out.println("[DEBUG] onDestroy()");
         super.onDestroy();
     }
 
-    @Override public void onSaveInstanceState(Bundle outState) {
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putParcelable("bitmap", imageBitmap);
         outState.putParcelable("coordinates", latLng);
         outState.putInt("user_id", userId);
+        outState.putInt("category", category);
+        outState.putInt("progressBarShown", progressBarShown);
+        System.out.println("[DEBUG] onSave, progressBarShown is " + progressBarShown);
     }
 
-    @Override public void onRestoreInstanceState(Bundle savedInstanceState){
+    @Override
+    public void onRestoreInstanceState(Bundle savedInstanceState){
         super.onRestoreInstanceState(savedInstanceState);
-        System.out.println("[DEBUG] after default onRestore(), userId is " + userId);
 
         imageBitmap = savedInstanceState.getParcelable("bitmap");
         if(imageBitmap != null) {
@@ -220,15 +246,17 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         } else {
             photoPreview.setImageResource(android.R.drawable.gallery_thumb);
         }
-
         latLng = savedInstanceState.getParcelable("coordinates");
         if(latLng != null) {
             currentLocation.setText(stringFromLatLng(latLng));
+        } else {
+            currentLocation.setText(R.string.coordinates_retrieval_instruction);
         }
-
-        userId = savedInstanceState.getInt("user_id", 0) != 0?
-                savedInstanceState.getInt("user_id", 0) : userId;
-        System.out.println("[DEBUG] after complete onRestore(), userId is " + userId);
+        int savedId = savedInstanceState.getInt("user_id", 0);
+        userId = ((savedId != 0)? savedId : userId);
+        category = savedInstanceState.getInt("category", 0);
+        progressBarShown = savedInstanceState.getInt("progressBarShown", 0);
+        System.out.println("[DEBUG] onRestore, progressBarShown is " + progressBarShown);
     }
 
     @Override
@@ -238,22 +266,13 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                        // The user has granted the app the permission to use the GPS. The app now will use it
                         initializeLocationProvider();
+                        obtainCurrentCoordinates(null);
                     }
                 }
                 break;
             }
-        }
-    }
-
-    public Bitmap StringToBitMap(String encodedString){
-        try {
-            byte [] encodeByte= Base64.decode(encodedString,Base64.DEFAULT);
-            Bitmap bitmap= BitmapFactory.decodeByteArray(encodeByte, 0, encodeByte.length);
-            return bitmap;
-        } catch(Exception e) {
-            e.getMessage();
-            return null;
         }
     }
 
@@ -266,10 +285,6 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
             photoPreview.setImageBitmap(imageBitmap);
             buttonAddPhoto.setText("change photo");
             imageString = BitMapToString(imageBitmap);
-            // TODO: la parte sottostante è solo di debug, andrà tolta
-            System.out.println("[DEBUG] sent imageString length is " + imageString.length());
-            Bitmap imageBitmapNew = StringToBitMap(imageString);
-            photoPreview.setImageBitmap(imageBitmapNew);
         } else if (requestCode == PICK_PHOTO && resultCode == Activity.RESULT_OK) {
             // Result returned from the pick photo from gallery app
             if (data == null) {
@@ -281,32 +296,33 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                 // The image is retrieved
                 InputStream inputStream = getApplicationContext().getContentResolver().openInputStream(data.getData());
                 imageBitmap = BitmapFactory.decodeStream(inputStream);
-
-                // The image is compressed
+                // The image is compressed (it may be huge and take a long time to be sent over the network)
                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
                 imageBitmap.compress(Bitmap.CompressFormat.JPEG, 10, outputStream);
-
-                // The imageString String, to be used in the send, is initialized
-                byte [] b=outputStream.toByteArray();
-                imageString= Base64.encodeToString(b, Base64.DEFAULT);
-                System.out.println("[DEBUG] selected image imageString length is " + imageString.length());
-
-                // The compressed image is retrieved
+                // The String imageString, to be sent over the network, is initialized, and
+                // the compress image become the current imageBitmap
                 byte[] bitmapdata = outputStream.toByteArray();
+                imageString = Base64.encodeToString(bitmapdata, Base64.DEFAULT);
                 imageBitmap = BitmapFactory.decodeByteArray(bitmapdata, 0, bitmapdata.length);
-
+                // The current imageBitmap is shown
                 photoPreview.setImageBitmap(imageBitmap);
                 buttonAddPhoto.setText("change photo");
             } catch(Exception e){
                 String message = "An error occurred while retrieving the image";
                 Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                // print
                 System.out.println("[DEBUG] exception: " + e.getMessage());
             }
         } else if(requestCode == REQUEST_MANUALLY_CHOOSE_COORDINATES && resultCode == RESULT_OK) {
-            // Result returned from the application used for let the user choose coordinates
-            locationManager.removeUpdates(this); // forse andrebbe in onStop?
+            // Result returned from the application used for letting the user choose coordinates
+            // TODO penso che questo avvenga automaticamente
+            // TODO qui crasha se non sono state scelte le coordinate
+            //locationManager.removeUpdates(this);
+            System.out.println("[DEBUG] 1. not crashed yet");
             Bundle extras = data.getExtras();
+            System.out.println("[DEBUG] 2. not crashed yet");
             latLng = (LatLng) extras.get("coordinates");
+            System.out.println("[DEBUG] 3. not crashed yet");
             currentLocation.setText(stringFromLatLng(latLng));
         }
     }
@@ -331,8 +347,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     }
 
     protected void manuallySelectCoordinates(View v) {
-        // TODO: questa cosa dovrei metterla ogni volta?
-        // secondo me no, secondo me giusto se chiamo roba esterna, ma non in questo caso
+        // This is used in case one day the BrowseMap activity will be removed
         Intent manualCoordinatesIntent = new Intent(this, BrowseMap.class);
         if(manualCoordinatesIntent.resolveActivity(getPackageManager()) != null) {
             startActivityForResult(manualCoordinatesIntent, REQUEST_MANUALLY_CHOOSE_COORDINATES);
@@ -348,35 +363,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         category = index;
     }
 
-    public void showDetailsDialog(View v) {
-        LayoutInflater layoutInflater = LayoutInflater.from(this);
-        final View inflater = layoutInflater.inflate(R.layout.dialog_insert_details, null);
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setView(inflater);
-
-        dialogDetails = (EditText) inflater.findViewById(R.id.editText_dialog_details);
-        dialogDetails.setText(detailsDialogContent);
-
-        builder.setPositiveButton("Save", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int id) {
-                System.out.println("[DEBUG] positive button pressed");
-                reportDetails.setText(dialogDetails.getText());
-                detailsDialogContent = dialogDetails.getText().toString();
-            }
-        })
-                .setNegativeButton("Do Not Save", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int id) {
-                        System.out.println("[DEBUG] negative button pressed");
-                        dialog.cancel();
-                    }
-                })
-                .setCancelable(false)
-                .show();
-    }
-
+    // TODO anche questo va fatto diversamente
     public void pickImageDialog(View v) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
@@ -440,6 +427,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
             Toast.makeText(getApplicationContext(), "You must insert the coordinates", Toast.LENGTH_LONG).show();
             return;
         } else if (reportTitle.getText().toString().isEmpty()) {
+            System.out.println("[DEBUG] string content:" + reportTitle.getText().toString());
             Toast.makeText(getApplicationContext(), "You must insert a title", Toast.LENGTH_LONG).show();
             return;
         } else if (category == 0){
@@ -456,15 +444,13 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
             return;
         }
 
-        loadingDialog = ProgressDialog.show(this, "", "Please wait...", true);
-
         String userIdString = "" + userId;
         String lat = "" + latLng.latitude;
         String lng = "" + latLng.longitude;
         String ratingString = "" + ratingBar.getRating();
         String categoryString = "" + category;
-        //String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
 
+        showProgressBar(true);
 
         send(userIdString, lat, lng, reportTitle.getText().toString(), categoryString,
                 reportDetails.getText().toString(), imageString, ratingString);
@@ -481,12 +467,31 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
          */
     }
 
+    protected void showProgressBar(boolean doIHaveToShow) {
+        if(doIHaveToShow) {
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+            relativeLayout.setBackgroundColor(ContextCompat.getColor(getApplicationContext(), R.color.uninteractive_screen));
+            progressBar_reportAnIssue_loading.setVisibility(View.VISIBLE);
+            progressBarShown = 1;
+        } else {
+            //progressBar_reportAnIssue_loading = (ProgressBar) findViewById(R.id.progressBar_reportAnIssue_loading);
+            progressBar_reportAnIssue_loading.setVisibility(View.GONE);
+            relativeLayout.setBackgroundColor(ContextCompat.getColor(getApplicationContext(), android.R.color.background_light));
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+            progressBarShown = 0;
+        }
+    }
+
+    // send non va
+    // loading --> caricamento
+
     private int send(final String userIdString, final String lat, final String lng,
                      final String title, final String categoryString,
                      final String details, final String imageString, final String ratingString) {
-        //System.out.println("[DEBUG] inside the send, variables are: userIdString=" + userIdString + ", lat=" + lat + "" +
-          //      ", lng=" + lng + ", title=" + title + ", categoryString=" + categoryString + ", date=" + date + "" +
-            //    ", details=" + details + ", imageString=" + imageString + ", ratingString=" + ratingString);
+        System.out.println("[DEBUG] inside the send, variables are: userIdString=" + userIdString + ", lat=" + lat + "" +
+                ", lng=" + lng + ", title=" + title + ", categoryString=" + categoryString +
+                ", details=" + details + ", imageString=" + imageString + ", ratingString=" + ratingString);
             StringRequest postRequest = new StringRequest(Request.Method.POST, url,
                     new Response.Listener<String>() {
                         @Override
@@ -496,15 +501,11 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                             if(response.equals("0")){
                                 String message = "An error occurred while sending the report";
                                 Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                                if(loadingDialog != null && loadingDialog.isShowing()){
-                                    loadingDialog.dismiss();
-                                }
+                                showProgressBar(false);
                             } else {
                                 String message = "Report sent successfully";
                                 Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                                if(loadingDialog != null && loadingDialog.isShowing()){
-                                    loadingDialog.dismiss();
-                                }
+                                showProgressBar(false);
                                 finish();
                             }
                         }
@@ -513,6 +514,10 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                         @Override
                         public void onErrorResponse(VolleyError error) {
                             // error
+                            // TODO
+                            String message = "Connection error";
+                            Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                            showProgressBar(false);
                             Log.d("[DEBUG] Error.Response", error.toString());
                         }
                     }
@@ -535,19 +540,80 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
             return 0;
         }
 
-    /*
+        public void load(View v){
+            System.out.println("[DEBUG] load. dataUserId is " + preferences.getInt("dataUserId", 0) + ", " +
+                    "while userId is " + userId);
+            showProgressBar(true);
+            if((preferences.getInt("dataUserId", 0)) != userId){
+                String message = "There are not saved data";
+                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+            } else {
+                reportTitle.setText(preferences.getString("reportTitle", ""));
+                category = preferences.getInt("category", 0);
+                reportCategory.setSelection(category);
+                reportDetails.setText(preferences.getString("reportDetails", ""));
+                ratingBar.setRating(preferences.getFloat("ratingBar", 0));
+
+                String latitude = preferences.getString("lat", "");
+                String longitude = preferences.getString("lng", "");
+                if(!(latitude.isEmpty())){
+                    latLng = new LatLng(Double.parseDouble(latitude), Double.parseDouble(longitude));
+                    currentLocation.setText(stringFromLatLng(latLng));
+                }
+                imageString = preferences.getString("imageString", "");
+                if(!(imageString.isEmpty())){
+                    imageBitmap = StringToBitMap(imageString);
+                    photoPreview.setImageBitmap(imageBitmap);
+                }
+                showProgressBar(false);
+            }
+        }
+
+        public void save(View v){
+            System.out.println("[DEBUG] save");
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putInt("dataUserId", userId);
+            editor.putString("reportTitle", reportTitle.getText().toString());
+            editor.putInt("category", category);
+            editor.putString("reportDetails", reportDetails.getText().toString());
+            editor.putFloat("ratingBar", ratingBar.getRating());
+            if(latLng == null){
+                editor.putString("lat", "");
+                editor.putString("lng", "");
+            } else {
+                editor.putString("lat", "" + latLng.latitude);
+                editor.putString("lng", "" + latLng.longitude);
+            }
+            if(imageBitmap == null){
+                editor.putString("imageString", "");
+            } else {
+                editor.putString("imageString", imageString);
+            }
+            editor.commit();
+        }
+
     @Override
-    public void onBackPressed(){
-        if(backButtonPressed == 0){
-            showLongToast("Press back again to exit. Inserted data will be lost");
-            backButtonPressed = 1;
+    public void onBackPressed() {
+        if(Settings.getConfirmExit(this)) {
+            // In the settings it is set the system has to ask confirm when exiting activity.
+            new AlertDialog.Builder(this)
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setTitle("Confirm exit")
+                    .setMessage("Are you sure you want to exit? unsaved data will be lost")
+                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            //finish();
+                            ReportAnIssue.super.onBackPressed();
+                        }
+
+                    })
+                    .setNegativeButton("No", null)
+                    .show();
         } else {
-            // Reset the backButtonPressed flag
-            backButtonPressed = 0;
-            super.onBackPressed();
+            ReportAnIssue.super.onBackPressed();
         }
     }
-    */
 
     @Override
     public void onProviderDisabled(String provider){ }
@@ -557,5 +623,4 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     public void onStatusChanged(String provider, int status, Bundle extras) { }
     @Override
     public void onNothingSelected(AdapterView<?> arg0){}
-
 }

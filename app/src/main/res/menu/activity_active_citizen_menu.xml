@@ -2,14 +2,12 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-    <item android:id="@+id/logout"
-        android:icon="@android:drawable/ic_menu_agenda"
-        android:titleCondensed="Agenda"
-        android:title="Logout">
-    </item>
     <item android:id="@+id/settings"
-        android:icon="@android:drawable/ic_menu_compass"
-        android:titleCondensed="Compass"
+        android:titleCondensed="Settings"
         android:title="Settings">
+    </item>
+    <item android:id="@+id/about"
+        android:titleCondensed="About"
+        android:title="About">
     </item>
 </menu>

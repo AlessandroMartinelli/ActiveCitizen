@@ -3,7 +3,9 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent">
-    <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    <RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/relativeLayout_reportAnIssue"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:paddingBottom="@dimen/activity_vertical_margin"
@@ -154,15 +156,6 @@
             android:layout_alignRight="@+id/textView_currentLocation"
             android:numStars="5" />
         <Button
-            android:id="@+id/buttonReset"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/ratingBar_priority"
-            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
-            android:backgroundTint="@color/dangerousAnswer"
-            android:text="Reset"
-            android:onClick="resetReport"/>
-        <Button
             android:id="@+id/buttonSendNewReport"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -173,15 +166,41 @@
             android:text="Send"
             android:onClick="sendReport"/>
         <Button
+            android:id="@+id/buttonReset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/buttonSendNewReport"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
+            android:backgroundTint="@color/dangerousAnswer"
+            android:text="Reset"
+            android:onClick="resetReport"/>
+        <Button
+            android:id="@+id/buttonLoad"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/buttonReset"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
+            android:layout_centerHorizontal="true"
+            android:backgroundTint="@color/loadAnswer"
+            android:text="Load"
+            android:onClick="load"/>
+        <Button
             android:id="@+id/buttonSave"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/ratingBar_priority"
+            android:layout_below="@+id/buttonSendNewReport"
             android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_alignRight="@+id/textView_currentLocation"
             android:backgroundTint="@color/saveAnswer"
             android:text="Save"
-            android:onClick="getReportIndex"/>
+            android:onClick="save" />
+        <ProgressBar
+            android:id="@+id/progressBar_reportAnIssue_loading"
+            android:visibility="gone"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:elevation="10dp"
+            android:layout_centerInParent="true" />
     </RelativeLayout>
 </ScrollView>
 

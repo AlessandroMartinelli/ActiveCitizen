@@ -14,4 +14,14 @@
         <item>Public health</item>
         <item>Other</item>
     </string-array>
+    <string-array name="themes_array">
+        <item>Classic Theme</item>
+        <item>Active Citizen Theme</item>
+        <item>Dark Theme</item>
+    </string-array>
+    <string-array name="themes_values_array">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
 </resources>
