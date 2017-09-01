@@ -44,7 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/textView_currentLocation"
             android:layout_alignRight="@+id/textView_currentLocation"
-            android:text="choose on map"
+            android:text="pick on map"
             android:onClick="manuallySelectCoordinates"/>
         <TextView
             android:id="@+id/textView_title"
@@ -153,8 +153,7 @@
             android:layout_below="@+id/button_addPhoto"
             android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_alignLeft="@+id/textView_currentLocation"
-            android:layout_alignRight="@+id/textView_currentLocation"
-            android:numStars="5" />
+            android:numStars="4" />
         <Button
             android:id="@+id/buttonSendNewReport"
             android:layout_width="wrap_content"

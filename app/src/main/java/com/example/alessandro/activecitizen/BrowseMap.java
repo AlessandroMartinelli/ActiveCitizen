@@ -89,56 +89,8 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
     protected AlertDialog reportDialog;
     protected RelativeLayout relativeLayout;
 
-    /**
-     * Utility method used for retrieving the String corresponding
-     * to the category choosen by means of the spinner.
-     * Case 0 means no choice has been done.
-     *
-     * @param categoryIndex an index representing the choosen category
-     * @return return a string representing the category
-     */
-
-
-
-
-
-    /*
-    private class ReportList{
-        protected ArrayList<Report> reportList;
-
-        public ReportList(){
-            reportList = new ArrayList<Report>();
-        }
-
-        public void addReport(Report report){
-            System.out.println("[DEBUG] sono dentro la addReport, report vale " + report.toString());
-            if(report == null){
-                System.out.println("[DEBUG] report e' null, quindi non chiamo la add di ArrayList");
-            } else {
-                System.out.println("[DEBUG] reportList vale null? " + (reportList == null? "yep" : "nope"));
-                reportList.add(report);
-            }
-        }
-
-
-        public void printFirst(){
-            System.out.println("[DEBUG] sono dentro la printFirst");
-            Report r = reportList.get(0);
-            if(r == null){
-                System.out.println("[DEBUG] report in printFirst() e' null, quindi non chiamo la print");
-            }
-            System.out.println("[DEBUG] Object #0 is: " +
-                    "username " + r.username + ", " +
-                    "authorId " + r.authorId + ", " +
-                    "reportId " + r.reportId + ", " +
-                    "reportTitle " + r.reportTitle + ", " +
-                    "coordinates " + r.coordinates.latitude + ", " + r.coordinates.longitude);
-        }
-    }
-    */
-
     protected class Report{
-        // dovrei aggiungere dei getter e dei setter per i campi non inizializzati nel costruttore
+        // TODO dovrei aggiungere dei getter e dei setter per i campi non inizializzati nel costruttore
         protected String reportAuthor;
         protected int authorId;
         protected int reportId;
@@ -306,6 +258,14 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
         }
     }
 
+    /**
+     * Utility method used for retrieving the String corresponding
+     * to the category choosen by means of the spinner.
+     * Case 0 means no choice has been done.
+     *
+     * @param categoryIndex an index representing the choosen category
+     * @return return a string representing the category
+     */
     protected String categoryIndexToString(int categoryIndex){
         switch (categoryIndex){
             case 0:
@@ -394,6 +354,7 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                             }
                             showReportDialog(marker);
                         }
+                        showProgressBar(false);
                     }
                 },
                 new Response.ErrorListener() {
@@ -526,6 +487,7 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                         // Request the full details to the server
                         System.out.println("[DEBUG] I'm going to retrieve the details of " + r.reportTitle);
                         // TODO qui forse dovrei passare anche il marker, così che, se opportuno, venga colorato
+                        showProgressBar(true);
                         getReportDetails(marker);
                     }
                 }
