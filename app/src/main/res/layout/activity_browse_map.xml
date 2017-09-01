@@ -16,5 +16,11 @@
         android:text="Track"
         android:onClick="commuteTracking"
         />
-
+    <ProgressBar
+        android:id="@+id/progressBar_browseMap_loading"
+        android:visibility="gone"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:elevation="10dp"
+        android:layout_centerInParent="true" />
 </RelativeLayout>

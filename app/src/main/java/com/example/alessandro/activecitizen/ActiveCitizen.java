@@ -1,3 +1,6 @@
+// TODO ci sono alcune situazioni strane, come browseMap crasha, nelle quali, una volta tornati
+// ad activecitizen, qui il tasto "logout" non e' presente.
+
 package com.example.alessandro.activecitizen;
 
 import android.app.Activity;
@@ -66,21 +69,24 @@ public class ActiveCitizen extends AppCompatActivity {
         public static AccountAlertDialogFragment newInstance() {
             return new AccountAlertDialogFragment();
         }
+
         @Override
         public void onCancel(DialogInterface dialog) {
             getActivity().finish();
         }
+
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
             return inflater.inflate(R.layout.dialog_account, container);
         }
+
         @Override
         public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
             super.onViewCreated(view, savedInstanceState);
 
             final Activity activity = getActivity();
-            Button loginButton = (Button)view.findViewById(R.id.button_dialogAccount_login);
-            Button registerButton = (Button)view.findViewById(R.id.button_dialogAccount_register);
+            Button loginButton = (Button) view.findViewById(R.id.button_dialogAccount_login);
+            Button registerButton = (Button) view.findViewById(R.id.button_dialogAccount_register);
             final EditText editText_existingUsername = (EditText) view.findViewById(R.id.editText_dialogAccount_existingUsername);
             final EditText editText_existingPassword = (EditText) view.findViewById(R.id.editText_dialogAccount_existingPassword);
             final EditText editText_newUsername = (EditText) view.findViewById(R.id.editText_dialogAccount_newUsername);
@@ -89,10 +95,10 @@ public class ActiveCitizen extends AppCompatActivity {
             loginButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if(editText_existingUsername.getText().toString().isEmpty()){
+                    if (editText_existingUsername.getText().toString().isEmpty()) {
                         String message = "You must insert an username";
                         Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                    } else if(editText_existingPassword.getText().toString().isEmpty()){
+                    } else if (editText_existingPassword.getText().toString().isEmpty()) {
                         String message = "You must insert a password";
                         Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
                     } else {
@@ -103,10 +109,10 @@ public class ActiveCitizen extends AppCompatActivity {
             registerButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if(editText_newUsername.getText().toString().isEmpty()){
+                    if (editText_newUsername.getText().toString().isEmpty()) {
                         String message = "You must insert an username";
                         Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                    } else if(editText_newPassword.getText().toString().isEmpty()) {
+                    } else if (editText_newPassword.getText().toString().isEmpty()) {
                         String message = "You must insert a password";
                         Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
                     } else {
@@ -116,7 +122,6 @@ public class ActiveCitizen extends AppCompatActivity {
             });
         }
     }
-
 
 
     @Override
@@ -146,7 +151,7 @@ public class ActiveCitizen extends AppCompatActivity {
         password = preferences.getString("password", "");
 
         // Checks if this is an application start or a device configuration change
-        if(savedInstanceState != null){
+        if (savedInstanceState != null) {
             fromConfigurationChange = true;
         }
     }
@@ -155,14 +160,17 @@ public class ActiveCitizen extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         System.out.println("[DEBUG] onResume, fromConfigurationChange is " + fromConfigurationChange);
-        if(fromConfigurationChange){
+        if (fromConfigurationChange) {
             System.out.println("[DEBUG] onResume, progressBarShown is " + progressBarShown);
-            if(progressBarShown == 1){
+            if (logged == 1) {
+                button_logout.setVisibility(View.VISIBLE);
+            }
+            if (progressBarShown == 1) {
                 showProgressBar(this, true);
             }
         } else {
             // The application has been started from scratch
-            if(logged == 0) {
+            if (logged == 0) {
                 // Just to avoid showing progressBar in case we go back to this activity from another one
                 if (username.equals("")) {
                     // The application has been just started, and no account informations exist on disk
@@ -180,17 +188,16 @@ public class ActiveCitizen extends AppCompatActivity {
     }
 
 
-
     // TODO: i 3 successivi potro rimuoverli, alla fine
     @Override
-    protected void onPause(){
+    protected void onPause() {
         super.onPause();
         System.out.println("[DEBUG] onPause()");
     }
 
 
     protected static void showProgressBar(Activity activity, boolean doIHaveToShow) {
-        if(doIHaveToShow) {
+        if (doIHaveToShow) {
             activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
             relativeLayout.setBackgroundColor(ContextCompat.getColor(activity.getApplicationContext(), R.color.uninteractive_screen));
@@ -206,15 +213,39 @@ public class ActiveCitizen extends AppCompatActivity {
     }
 
     @Override
-    protected void onStop(){
+    protected void onStop() {
         super.onStop();
         System.out.println("[DEBUG] onStop()");
     }
 
     @Override
-    protected void onDestroy(){
+    protected void onDestroy() {
         super.onDestroy();
         System.out.println("[DEBUG] onDestroy()");
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        MenuInflater mi = getMenuInflater();
+        mi.inflate(R.menu.activity_active_citizen_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.settings:
+                Intent i = new Intent(this, Settings.class);
+                startActivity(i);
+                return true;
+            case R.id.about:
+                // TODO print
+                System.out.println("[DEBUG] about pressed");
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     @Override
@@ -230,9 +261,9 @@ public class ActiveCitizen extends AppCompatActivity {
     }
 
     @Override
-    public void onRestoreInstanceState(Bundle savedInstanceState){
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-        if(savedInstanceState != null) {
+        if (savedInstanceState != null) {
             logged = savedInstanceState.getInt("logged", 100);
             progressBarShown = savedInstanceState.getInt("progressBarShown", 0);
             // TODO print
@@ -241,7 +272,7 @@ public class ActiveCitizen extends AppCompatActivity {
             username = savedInstanceState.getString("username");
             password = savedInstanceState.getString("password");
             System.out.println("[DEBUG] onRestoreInstanceState(), user e pass e id sono " + username + ", " + password + ", " + userId);
-            if(!username.equals("")){
+            if (!username.equals("")) {
                 textView_activeCitizen_hello.setText("Welcome, " + username);
             }
         }
@@ -255,13 +286,13 @@ public class ActiveCitizen extends AppCompatActivity {
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        if(response.equals("0")){
+                        if (response.equals("0")) {
                             // TODO print
                             // An exception occurred at the server
                             System.out.println("[DEBUG] response equals 0");
                             String message = "An error occurred while contacting the server";
                             Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                        } else if(response.equals("-1")){
+                        } else if (response.equals("-1")) {
                             // TODO print
                             // The select returned no entries
                             System.out.println("[DEBUG] response equals -1");
@@ -285,12 +316,12 @@ public class ActiveCitizen extends AppCompatActivity {
                             button_logout.setVisibility(View.VISIBLE);
                             showProgressBar(activity, false);
 
-                            if((ActiveCitizen.accountDialog != null)&&(ActiveCitizen.accountDialog.isResumed())) {
+                            if ((ActiveCitizen.accountDialog != null) && (ActiveCitizen.accountDialog.isResumed())) {
                                 // the login happened by means of account dialog, that now must be closed
                                 ActiveCitizen.accountDialog.dismiss();
                             } else {
                                 // TODO controllare se fosse sufficiente utilizzare solo la parte qui sotto
-                                DialogFragment dialogFragment = (DialogFragment)activity.getFragmentManager().findFragmentByTag("account_dialog");
+                                DialogFragment dialogFragment = (DialogFragment) activity.getFragmentManager().findFragmentByTag("account_dialog");
                                 if (dialogFragment != null) {
                                     dialogFragment.dismiss();
                                 }
@@ -312,7 +343,7 @@ public class ActiveCitizen extends AppCompatActivity {
         ) {
             @Override
             protected Map<String, String> getParams() {
-                Map<String, String>  params = new HashMap<String, String>();
+                Map<String, String> params = new HashMap<String, String>();
                 params.put("username", existingUsername);
                 params.put("password", existingPassword);
                 return params;
@@ -321,19 +352,19 @@ public class ActiveCitizen extends AppCompatActivity {
         queue.add(postRequest);
     }
 
-    protected static void register(final Activity activity, final String newUsername, final String newPassword){
+    protected static void register(final Activity activity, final String newUsername, final String newPassword) {
         // TODO print
         String url = "http://www.activecitizen.altervista.org/register/";
         StringRequest postRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        if(response.equals("0")) {
+                        if (response.equals("0")) {
                             // An exception occurred at the server
                             System.out.println("[DEBUG] response equals 0");
                             String message = "An error occurred while contacting the server";
                             Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                        } else if(response.equals("-1")){
+                        } else if (response.equals("-1")) {
                             // There already exists an account with that username
                             String message = "Username already used, choose another";
                             Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
@@ -353,7 +384,7 @@ public class ActiveCitizen extends AppCompatActivity {
                             editor.commit();
                             // TODO print
                             //System.out.println("[DEBUG] registration successful, user e pass e id sono " + username + ", " + password + ", " + userId);
-                            if((accountDialog != null)&&(accountDialog.isResumed())) {
+                            if ((accountDialog != null) && (accountDialog.isResumed())) {
                                 accountDialog.dismiss();
                             }
                         }
@@ -371,7 +402,7 @@ public class ActiveCitizen extends AppCompatActivity {
         ) {
             @Override
             protected Map<String, String> getParams() {
-                Map<String, String>  params = new HashMap<String, String>();
+                Map<String, String> params = new HashMap<String, String>();
                 params.put("username", newUsername);
                 params.put("password", newPassword);
                 return params;
@@ -381,7 +412,7 @@ public class ActiveCitizen extends AppCompatActivity {
     }
 
     public void launchReportAnIssue(View v) {
-        if(userId == 0){
+        if (userId == 0) {
             Toast.makeText(getApplicationContext(), "Account error", Toast.LENGTH_LONG).show();
             finish();
         }
@@ -393,7 +424,7 @@ public class ActiveCitizen extends AppCompatActivity {
     }
 
     public void launchBrowseMap(View v) {
-        if(userId == 0){
+        if (userId == 0) {
             Toast.makeText(getApplicationContext(), "Account error", Toast.LENGTH_LONG).show();
             finish();
         }
@@ -403,7 +434,7 @@ public class ActiveCitizen extends AppCompatActivity {
         startActivity(i);
     }
 
-    public void logout(View v){
+    public void logout(View v) {
         // TODO print
         System.out.println("[DEBUG] logout pressed");
         userId = 0;
@@ -418,29 +449,5 @@ public class ActiveCitizen extends AppCompatActivity {
         editor.commit();
         showDialog();
         logged = 0;
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        super.onCreateOptionsMenu(menu);
-        MenuInflater mi = getMenuInflater();
-        mi.inflate(R.menu.activity_active_citizen_menu, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.settings:
-                Intent i = new Intent(this, Settings.class);
-                startActivity(i);
-                return true;
-            case R.id.about:
-                // TODO print
-                System.out.println("[DEBUG] settings pressed");
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
     }
 }
