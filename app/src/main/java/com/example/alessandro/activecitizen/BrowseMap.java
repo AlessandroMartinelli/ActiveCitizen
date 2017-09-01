@@ -8,24 +8,22 @@
 package com.example.alessandro.activecitizen;
 
 import android.app.Activity;
-import android.app.ProgressDialog;
-import android.content.DialogInterface;
+import android.app.DialogFragment;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Criteria;
-import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -78,16 +76,114 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
     protected boolean manuallySelectCoordinates;      // true if the activity has been started from ReportAnIssuue activity
     protected boolean fromConfigurationChange;
 
-    protected int userId;
-    protected RequestQueue queue;
+    protected static int userId;                        // TODO è proprio necessario che sia statico?
+    protected static RequestQueue queue;                // TODO è proprio necessario che sia statico?
     //protected ProgressDialog loadingDialog;
     protected ProgressBar progressBar_loading;          // Loading ProgressBar
     protected int progressBarShown;
     protected String reportsIndex;
     //private ReportList reportList;
 
-    protected AlertDialog reportDialog;
+    //protected AlertDialog reportDialog;
     protected RelativeLayout relativeLayout;
+    protected static ReportDialogFragment reportDialog;
+
+    public static class ReportDialogFragment extends DialogFragment {
+        static Marker marker;
+
+        public static ReportDialogFragment newInstance(Marker currentMarker) {
+            marker = currentMarker;
+            return new ReportDialogFragment();
+        }
+        // TODO questo dovrò implementarlo?
+        /*
+        @Override
+        public void onCancel(DialogInterface dialog) {
+            getActivity().finish();
+        }
+        */
+        @Override
+        public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+            return inflater.inflate(R.layout.dialog_report, container);
+        }
+        @Override
+        public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+            final Activity activity = getActivity();
+            final Report report = (Report) marker.getTag();
+
+            final TextView title = (TextView) view.findViewById(R.id.textView_dialogReport_title);
+            final TextView category = (TextView) view.findViewById(R.id.textView_dialogReport_category);
+            final TextView author_and_date = (TextView) view.findViewById(R.id.textView_dialogReport_author_and_date);
+            final TextView details = (TextView) view.findViewById(R.id.textView_dialogReport_details);
+            final ImageView image = (ImageView) view.findViewById(R.id.imageView_dialogReport_image);
+            final RatingBar averageRate = (RatingBar) view.findViewById(R.id.ratingBar_dialogReport_averageRate);
+            final RatingBar yourRate = (RatingBar) view.findViewById(R.id.ratingBar_dialogReport_yourRate);
+            final Button buttonRate = (Button) view.findViewById(R.id.button_ratingBar_rate);
+
+            title.setText(report.reportTitle);
+            category.setText("Category: " + categoryIndexToString(report.reportCategory));
+            author_and_date.setText("Reported by " + report.reportAuthor + " on " + report.reportDate);
+            details.setText(report.reportDetails);
+            image.setImageBitmap(report.reportImage);
+            averageRate.setRating(report.avgRating);
+            yourRate.setRating(report.your_rate);
+
+            buttonRate.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    final int the_rate_is_new = (report.your_rate == 0 ? 1 : 0);
+                    System.out.println("[DEBUG]: the_rate_is_new vale " + the_rate_is_new);
+                    String url = "http://www.activecitizen.altervista.org/rate/";
+                    //System.out.println("[DEBUG] inside the send rate, rate is " + rating.getRating() +
+                    //      ", old_rate is " + old_rate);
+                    StringRequest postRequest = new StringRequest(Request.Method.POST, url,
+                            new Response.Listener<String>() {
+                                @Override
+                                public void onResponse(String response) {
+                                    if (response.equals("-1")) {
+                                        System.out.println("[DEBUG] response is 0 :c");
+                                        reportDialog.dismiss();
+                                    } else {
+                                        report.your_rate = yourRate.getRating();
+                                        if (report.authorId != userId) {
+                                            // If the report has been issued by the user,
+                                            // its color its already HUE_AZURE, no need
+                                            // to modifying it
+                                            marker.setIcon(BitmapDescriptorFactory.
+                                                    defaultMarker(BitmapDescriptorFactory.HUE_ORANGE));
+                                            reportDialog.dismiss();
+                                        }
+                                        System.out.println("[DEBUG] response is " + response);
+                                        String message = "Report voted successfully";
+                                        Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                                        //TODO qui si deve poi fare il dismiss del dialog
+                                    }
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    System.out.println("[DEBUG] onErrorResponse. Error is " + error.getMessage());
+                                    reportDialog.dismiss();
+                                }
+                            }) {
+                        @Override
+                        protected Map<String, String> getParams() {
+                            Map<String, String> params = new HashMap<String, String>();
+                            params.put("user_id", "" + userId);
+                            params.put("report_id", "" + report.reportId);
+                            params.put("rate", "" + yourRate.getRating());
+                            params.put("old_rate", "" + report.your_rate);
+                            params.put("the_rate_is_new", "" + the_rate_is_new);
+                            return params;
+                        }
+                    };
+                    queue.add(postRequest);
+                }
+            });
+        }
+    }
+
 
     protected class Report{
         // TODO dovrei aggiungere dei getter e dei setter per i campi non inizializzati nel costruttore
@@ -266,7 +362,7 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
      * @param categoryIndex an index representing the choosen category
      * @return return a string representing the category
      */
-    protected String categoryIndexToString(int categoryIndex){
+    protected static String categoryIndexToString(int categoryIndex){
         switch (categoryIndex){
             case 0:
                 return "";
@@ -320,7 +416,7 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
         }
     }
 
-    protected void getReportDetails(final Marker marker){
+    protected void getCompleteReport(final Marker marker){
         final Report r = (Report)marker.getTag();
         String url = "http://www.activecitizen.altervista.org/get_report_details/";
         System.out.println("[DEBUG] inside retrieveReportDetails_v1 for " + r.reportTitle +
@@ -352,7 +448,7 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                             if(b != null){
                                 r.reportImage = b;
                             }
-                            showReportDialog(marker);
+                            showCompleteReport(marker);
                         }
                         showProgressBar(false);
                     }
@@ -482,13 +578,13 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                     if(r.reportImage != null){
                         System.out.println("[DEBUG] reportImage already stored, no need to download it again");
                         // TODO: r.showDetailedView();
-                        showReportDialog(marker);
+                        showCompleteReport(marker);
                     } else {
                         // Request the full details to the server
                         System.out.println("[DEBUG] I'm going to retrieve the details of " + r.reportTitle);
                         // TODO qui forse dovrei passare anche il marker, così che, se opportuno, venga colorato
                         showProgressBar(true);
-                        getReportDetails(marker);
+                        getCompleteReport(marker);
                     }
                 }
             });
@@ -496,6 +592,11 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
             // TODO: aggiornare i valori subito dopo averli modificati
         }
         showProgressBar(false);
+    }
+
+    protected void showCompleteReport(Marker marker) {
+        reportDialog = ReportDialogFragment.newInstance(marker);
+        reportDialog.show(getFragmentManager(), "report_dialog");
     }
 
     protected void showProgressBar(boolean doIHaveToShow) {
@@ -516,6 +617,7 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
         }
     }
 
+    /*
     protected void showReportDialog(final Marker marker) {
         final Report report = (Report) marker.getTag();
         LayoutInflater layoutInflater = LayoutInflater.from(this);
@@ -604,6 +706,7 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
             }
         });
     }
+    */
 
     /**
      * Retrieve the Bitmap codified in the given String

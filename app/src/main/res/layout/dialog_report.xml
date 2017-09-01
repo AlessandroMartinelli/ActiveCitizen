@@ -65,23 +65,46 @@
             android:layout_centerHorizontal="true"
             android:scaleType="centerCrop"
             />
+        <TextView
+            android:id="@+id/textView_dialogReport_averageRate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/imageView_dialogReport_image"
+            android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
+            android:text="Average rate"/>
         <RatingBar
-            android:id="@+id/ratingBar_dialogReport_rating"
+            android:id="@+id/ratingBar_dialogReport_averageRate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/imageView_dialogReport_image"
+            android:layout_toRightOf="@+id/textView_dialogReport_averageRate"
+            android:layout_alignParentRight="true"
+            android:numStars="4" />
+        <TextView
+            android:id="@+id/textView_dialogReport_yourRate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/ratingBar_dialogReport_averageRate"
             android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
-            android:layout_centerHorizontal="true"
-            android:numStars="5" />
+            android:text="Your rate"/>
+        <RatingBar
+            android:id="@+id/ratingBar_dialogReport_yourRate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/ratingBar_dialogReport_averageRate"
+            android:layout_toRightOf="@+id/textView_dialogReport_averageRate"
+            android:layout_alignParentRight="true"
+            android:numStars="4" />
         <Button
             android:id="@+id/button_ratingBar_rate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="@dimen/normal_text_size"
-            android:layout_below="@+id/ratingBar_dialogReport_rating"
+            android:layout_below="@+id/ratingBar_dialogReport_yourRate"
             android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
             android:layout_centerHorizontal="true"
-            android:text="Rate"
-            />
+            android:text="Rate" />
     </RelativeLayout>
 </ScrollView>
