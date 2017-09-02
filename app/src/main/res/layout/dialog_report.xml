@@ -62,6 +62,7 @@
             android:layout_height="150dp"
             android:layout_below="@+id/textView_dialogReport_details"
             android:layout_marginTop="@dimen/activity_intraelement_vertical_margin"
+            android:layout_marginBottom="@dimen/activity_intraelement_vertical_margin"
             android:layout_centerHorizontal="true"
             android:scaleType="centerCrop"
             />

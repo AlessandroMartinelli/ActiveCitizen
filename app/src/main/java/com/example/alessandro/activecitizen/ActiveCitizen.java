@@ -61,6 +61,11 @@ public class ActiveCitizen extends AppCompatActivity {
         accountDialog.show(getFragmentManager(), "account_dialog");
     }
 
+    protected static void showDialog(Activity activity) {
+        accountDialog = AccountAlertDialogFragment.newInstance();
+        accountDialog.show(activity.getFragmentManager(), "account_dialog");
+    }
+
     public static class AccountAlertDialogFragment extends DialogFragment {
         public static AccountAlertDialogFragment newInstance() {
             return new AccountAlertDialogFragment();
@@ -159,6 +164,7 @@ public class ActiveCitizen extends AppCompatActivity {
         if (fromConfigurationChange) {
             System.out.println("[DEBUG] onResume, progressBarShown is " + progressBarShown);
             if (logged == 1) {
+                System.out.println("[DEBUG] onResume, sto per rendere visibile il bottone di logout");
                 button_logout.setVisibility(View.VISIBLE);
             }
             if (progressBarShown == 1) {
@@ -282,18 +288,23 @@ public class ActiveCitizen extends AppCompatActivity {
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        if (response.equals("0")) {
+                        System.out.println("[DEBUG] login(), response is " + response);
+                        if (response.compareTo("0") == 0) {
                             // TODO print
                             // An exception occurred at the server
                             System.out.println("[DEBUG] response equals 0");
                             String message = "An error occurred while contacting the server";
                             Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                        } else if (response.equals("-1")) {
+                        } else if (response.compareTo("-1") == 0) {
                             // TODO print
                             // The select returned no entries
                             System.out.println("[DEBUG] response equals -1");
                             String message = "Invalid username or password";
                             Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                            if(accountDialog == null){
+                                // This can happen if account data stored on the device are no longer valid (e.g. database has been manually modified)
+                                showDialog(activity);
+                            }
                         } else {
                             // The inserted information were correct. The answer contains the account id
                             userId = Integer.parseInt(response);
@@ -312,13 +323,15 @@ public class ActiveCitizen extends AppCompatActivity {
                             button_logout.setVisibility(View.VISIBLE);
                             showProgressBar(activity, false);
 
-                            if ((ActiveCitizen.accountDialog != null) && (ActiveCitizen.accountDialog.isResumed())) {
+                            if ((accountDialog != null) && (accountDialog.isResumed())) {
+                                System.out.println("[DEBUG] login successful, dialog chiuso nel primo if ");
                                 // the login happened by means of account dialog, that now must be closed
-                                ActiveCitizen.accountDialog.dismiss();
+                                accountDialog.dismiss();
                             } else {
                                 // TODO controllare se fosse sufficiente utilizzare solo la parte qui sotto
                                 DialogFragment dialogFragment = (DialogFragment) activity.getFragmentManager().findFragmentByTag("account_dialog");
                                 if (dialogFragment != null) {
+                                    System.out.println("[DEBUG] login successful, dialog chiuso nel secondo if ");
                                     dialogFragment.dismiss();
                                 }
                             }
@@ -355,12 +368,12 @@ public class ActiveCitizen extends AppCompatActivity {
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        if (response.equals("0")) {
+                        if ((response.compareTo("0") == 0)) {
                             // An exception occurred at the server
                             System.out.println("[DEBUG] response equals 0");
                             String message = "An error occurred while contacting the server";
                             Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                        } else if (response.equals("-1")) {
+                        } else if (response.compareTo("-1") == 0) {
                             // There already exists an account with that username
                             String message = "Username already used, choose another";
                             Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
@@ -379,9 +392,17 @@ public class ActiveCitizen extends AppCompatActivity {
                             editor.putString("password", password);
                             editor.commit();
                             // TODO print
-                            //System.out.println("[DEBUG] registration successful, user e pass e id sono " + username + ", " + password + ", " + userId);
                             if ((accountDialog != null) && (accountDialog.isResumed())) {
+                                System.out.println("[DEBUG] registration successful, dialog chiuso nel primo if ");
+                                // the login happened by means of account dialog, that now must be closed
                                 accountDialog.dismiss();
+                            } else {
+                                // TODO controllare se fosse sufficiente utilizzare solo la parte qui sotto
+                                DialogFragment dialogFragment = (DialogFragment) activity.getFragmentManager().findFragmentByTag("account_dialog");
+                                if (dialogFragment != null) {
+                                    System.out.println("[DEBUG] registration successful, dialog chiuso nel secondo if ");
+                                    dialogFragment.dismiss();
+                                }
                             }
                         }
                     }

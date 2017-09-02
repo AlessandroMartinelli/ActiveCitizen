@@ -9,13 +9,20 @@ package com.example.alessandro.activecitizen;
 
 import android.app.Activity;
 import android.app.DialogFragment;
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.location.Criteria;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -54,9 +61,12 @@ import org.json.JSONObject;
 
 import android.Manifest;
 
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import static android.R.attr.id;
 import static com.example.alessandro.activecitizen.ReportAnIssue.LOCATION_PERMISSION;
 import static java.lang.Integer.parseInt;
 
@@ -120,6 +130,45 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
             final RatingBar yourRate = (RatingBar) view.findViewById(R.id.ratingBar_dialogReport_yourRate);
             final Button buttonRate = (Button) view.findViewById(R.id.button_ratingBar_rate);
 
+            image.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                    report.reportImage.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
+                    String path = MediaStore.Images.Media.insertImage(activity.getApplicationContext().getContentResolver(), report.reportImage, "Title", null);
+                    Uri imgUri = Uri.parse(path);
+                    Intent intent = new Intent();
+                    intent.setAction(Intent.ACTION_VIEW);
+                    intent.setDataAndType(imgUri, "image/*");
+                    startActivity(intent);
+                    /*
+                    try {
+
+                        //Write file
+                        String filename = "bitmap.png";
+                        FileOutputStream stream = activity.openFileOutput(filename, Context.MODE_PRIVATE);
+                        report.reportImage.compress(Bitmap.CompressFormat.PNG, 100, stream);
+
+                        //Cleanup
+                        stream.close();
+                        report.reportImage.recycle();       // TODO controllare se serve davvero
+
+                        //Pop intent
+                        Intent in1 = new Intent(this, Activity2.class);
+                        in1.putExtra("image", filename);
+                        startActivity(in1);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    */
+
+                }
+            });
+
+
+
+
+
             title.setText(report.reportTitle);
             category.setText("Category: " + categoryIndexToString(report.reportCategory));
             author_and_date.setText("Reported by " + report.reportAuthor + " on " + report.reportDate);
@@ -140,8 +189,9 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                             new Response.Listener<String>() {
                                 @Override
                                 public void onResponse(String response) {
-                                    if (response.equals("-1")) {
-                                        System.out.println("[DEBUG] response is 0 :c");
+                                    if((response.compareTo("0") == 0) && (response.compareTo("-1") == 0)){
+                                        String message = "An error occurred while sending the rate";
+                                        Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
                                         reportDialog.dismiss();
                                     } else {
                                         report.your_rate = yourRate.getRating();
@@ -425,12 +475,14 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        if (response.equals("0")) {
+                        if((response.compareTo("0") == 0)) {
                             String message = "An error occurred while contacting the server";
                             Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                        } else if(response.equals("-1")) {
+                            // TODO interrupt loading
+                        } else if((response.compareTo("-1") == 0)) {
                             String message = "Error in retrieving the report";
                             Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                            // TODO interrupt loading
                         } else {
                             try {
                                 JSONObject jObject = new JSONObject("{output:" + response + "}");
@@ -480,16 +532,20 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
+                        System.out.println("[DEBUG] getReportIndex() onResponse(), response is " + response);
                         // TODO: ricordarsi di gestire in maniera uniforme gli errori, in tutte le activity
-                        if(response.equals("0")){
+                        if((response.compareTo("0") == 0)){
                             System.out.println("[DEBUG] getReportIndex() response is 0");
                             String message = "An error occurred while contacting the server";
                             Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
                             reportsIndex = response;
-                        } else if(response.equals("-1")){
+                            showProgressBar(false);
+                            // TODO aggiustare il loading dialog
+                        } else if(response.compareTo("-1") == 0){
                             System.out.println("[DEBUG] getReportIndex() response is -1");
                             String message = "No report to retrieve";
                             Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                            showProgressBar(false);
                             // TODO aggiustare il loading dialog
                             //if(loadingDialog != null && loadingDialog.isShowing()){
                             //    loadingDialog.dismiss();
@@ -530,11 +586,23 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
     }
 
     protected void parseReportsIndex(String reportsIndex) {
-        System.out.println("[DEBUG] parseReportsIndex()");
+
         String[] reports = reportsIndex.split("=");
         int reportNum = reports.length;
+        System.out.println("[DEBUG] parseReportsIndex(), reportNum is " + reportNum);
         for(int i=0; i<reportNum; i++){
+            System.out.println("[DEBUG] parseReportsIndex(), report num " + i);
             String[] reportField = reports[i].split("~");
+
+            System.out.println("[DEBUG]: " + reportField[0] + ", " +
+                                reportField[1]  + ", " +
+                                reportField[2]  + ", " +
+                                reportField[3]  + ", " +
+                                reportField[4]  + ", " +
+                                reportField[5]  + ", " +
+                                reportField[6]  + ", " +
+                                reportField[7]  + ", "
+                                );
 
             Report newReport = new Report(
                     Integer.parseInt(reportField[0]), //authorId
@@ -724,8 +792,45 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
         }
     }
 
-}
+    /*
+    public void viewImage(View v){
+        System.out.println("image pressed");
+        ImageView clickedImage = (ImageView) v;
+        Drawable image = clickedImage.getDrawable();
 
+        Resources res = clickedImage.getResources();
+        clickedImage.setImageResource(res.getIdentifier());
+
+        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
+        byte[] b = baos.toByteArray();
+
+        Intent intent = new Intent(this, ActivityB.class);
+        intent.putExtra("picture", b);
+        startActivity(intent);
+
+
+
+        ContentResolver cr = getApplicationContext().getContentResolver();
+
+        String columns[] = new String[]{MediaStore.Images.Media._ID, MediaStore.Images.Media.DATA};
+        Cursor cursor = cr.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, columns, MediaStore.Images.Media._ID+"=?", new String[]{id+""}, null);
+        int imageID = cursor.getInt( cursor.getColumnIndex(MediaStore.Images.Media.getBitmap()));
+
+        //String imageId = v;
+
+        Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI.buildUpon().appendPath(imageId).build();
+        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+        startActivity(intent);
+
+
+
+        //Uri uri = Uri.parse("android.resource://com.example.alessandro.activecitizen/drawable/image_name");
+        //image.
+    }
+    */
+}
 
 //android:icon="@android/drawable/..
 //TODO: back non sta facendo il suo dovere di, se un marker ha la sua finestrella visualizzata, toglierla e basta

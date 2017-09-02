@@ -64,7 +64,6 @@
             android:layout_toRightOf="@+id/textView_title"
             android:layout_alignLeft="@+id/textView_currentLocation"
             android:background="@android:color/white"
-            android:digits="0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz àèìòù?!.,:;_-'"
             android:inputType="textCapSentences|textMultiLine"
             android:hint="insert title, max 50 chars"
             android:maxLength="50" />
@@ -104,7 +103,6 @@
             android:layout_toRightOf="@+id/textView_details"
             android:layout_alignLeft="@+id/textView_currentLocation"
             android:background="@android:color/white"
-            android:digits="0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz àèìòù?!.,:;_-'"
             android:inputType="textCapSentences|textMultiLine"
             android:hint="insert details, max 500 chars"
             android:maxLength="500" />

@@ -20,6 +20,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.text.InputFilter;
+import android.text.Spanned;
 import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -94,6 +96,18 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     protected static RelativeLayout relativeLayout;                 // Layout. Used to change background_color
     protected int progressBarShown;
 
+    protected String blockCharacterSet = "~=";
+
+    protected InputFilter filter = new InputFilter() {
+        @Override
+        public CharSequence filter(CharSequence source, int start, int end, Spanned dest, int dstart, int dend) {
+            if (source != null && blockCharacterSet.contains(("" + source))) {
+                return "";
+            }
+            return null;
+        }
+    };
+
     /**
      * Method used for codifying a Bitmap into a String. The String will be
      * stored on a database
@@ -167,8 +181,10 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         photoPreview = (ImageView) findViewById(R.id.imageView_photoPreview);
         buttonAddPhoto = (Button) findViewById(R.id.button_addPhoto);
         ratingBar = (RatingBar) findViewById(R.id.ratingBar_priority);
-        progressBar_reportAnIssue_loading = (ProgressBar) findViewById(R.id.progressBar_reportAnIssue_loading);
+        reportTitle.setFilters(new InputFilter[] { filter });
+        reportDetails.setFilters(new InputFilter[] { filter });
         relativeLayout = (RelativeLayout) findViewById(R.id.relativeLayout_reportAnIssue);
+        progressBar_reportAnIssue_loading = (ProgressBar) findViewById(R.id.progressBar_reportAnIssue_loading);
         progressBarShown = 0;
 
         // Initialize the spinner used for choosing a category
@@ -498,7 +514,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                         public void onResponse(String response) {
                             // response
                             System.out.println("[DEBUG] Response" + response);
-                            if(response.equals("0")){
+                            if((response.compareTo("0") == 0) || (response.compareTo("-1") == 0)){
                                 String message = "An error occurred while sending the report";
                                 Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
                                 showProgressBar(false);
@@ -599,7 +615,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
             new AlertDialog.Builder(this)
                     .setIcon(android.R.drawable.ic_dialog_alert)
                     .setTitle("Confirm exit")
-                    .setMessage("Are you sure you want to exit? unsaved data will be lost")
+                    .setMessage("Are you sure you want to exit? Unsaved data will be lost")
                     .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
