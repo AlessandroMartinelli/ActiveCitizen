@@ -25,6 +25,9 @@ import android.text.Spanned;
 import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
@@ -275,6 +278,41 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         System.out.println("[DEBUG] onRestore, progressBarShown is " + progressBarShown);
     }
 
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        MenuInflater mi = getMenuInflater();
+        mi.inflate(R.menu.activity_report_an_issue_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.save:
+                save();
+                return true;
+            case R.id.load:
+                load();
+                return true;
+            case R.id.reset:
+                resetReport();
+                return true;
+            case R.id.settings:
+                Intent i = new Intent(this, Settings.class);
+                startActivity(i);
+                return true;
+            case R.id.about:
+                // TODO print
+                System.out.println("[DEBUG] about pressed");
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
@@ -420,7 +458,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         startActivityForResult(intent, PICK_PHOTO);
     }
 
-    public void resetReport(View v){
+    public void resetReport(){
         currentLocation.setText(R.string.coordinates_retrieval_instruction);
         reportTitle.setText("");
         reportCategory.setSelection(0);
@@ -556,7 +594,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
             return 0;
         }
 
-        public void load(View v){
+        public void load(){
             System.out.println("[DEBUG] load. dataUserId is " + preferences.getInt("dataUserId", 0) + ", " +
                     "while userId is " + userId);
             showProgressBar(true);
@@ -585,7 +623,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
             }
         }
 
-        public void save(View v){
+        public void save(){
             System.out.println("[DEBUG] save");
             SharedPreferences.Editor editor = preferences.edit();
             editor.putInt("dataUserId", userId);

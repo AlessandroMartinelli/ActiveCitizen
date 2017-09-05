@@ -29,6 +29,9 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -180,6 +183,11 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
             buttonRate.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    if(yourRate.getRating() == 0){
+                        String message = "You must rate the issue (0 is not accepted)";
+                        Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                        return;
+                    }
                     final int the_rate_is_new = (report.your_rate == 0 ? 1 : 0);
                     System.out.println("[DEBUG]: the_rate_is_new vale " + the_rate_is_new);
                     String url = "http://www.activecitizen.altervista.org/rate/";
@@ -306,6 +314,14 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        MenuInflater mi = getMenuInflater();
+        mi.inflate(R.menu.activity_active_citizen_menu, menu);
+        return true;
+    }
+
+    @Override
     protected void onResume(){
         super.onResume();
         //if(progressBarShown == 1){
@@ -380,6 +396,23 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
         UiSettings settings = gmap.getUiSettings();
         settings.setZoomControlsEnabled(true);
     }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.settings:
+                Intent i = new Intent(this, Settings.class);
+                startActivity(i);
+                return true;
+            case R.id.about:
+                // TODO print
+                System.out.println("[DEBUG] about pressed");
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {

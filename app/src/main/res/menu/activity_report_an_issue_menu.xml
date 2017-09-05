@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <item android:id="@+id/save"
+        android:titleCondensed="save"
+        android:title="Save report">
+    </item>
+    <item android:id="@+id/load"
+        android:titleCondensed="load"
+        android:title="Load report">
+    </item>
+    <item android:id="@+id/reset"
+        android:titleCondensed="reset"
+        android:title="Reset report">
+    </item>
+    <item android:id="@+id/settings"
+        android:titleCondensed="Settings"
+        android:title="Settings">
+    </item>
+    <item android:id="@+id/about"
+        android:titleCondensed="About"
+        android:title="About">
+    </item>
+</menu>
