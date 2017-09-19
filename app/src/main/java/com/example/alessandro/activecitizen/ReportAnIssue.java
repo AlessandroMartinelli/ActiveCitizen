@@ -24,7 +24,6 @@ import android.text.InputFilter;
 import android.text.Spanned;
 import android.util.Base64;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -82,7 +81,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
     protected RequestQueue queue;
     protected String url;
 
-    protected SharedPreferences preferences;
+    protected SharedPreferences applicationData;
     protected LatLng latLng;
     protected Bitmap imageBitmap;
     protected String imageString;
@@ -175,7 +174,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
 
         queue = Volley.newRequestQueue(this);
         url = "http://www.activecitizen.altervista.org/send_report/";
-        preferences = getPreferences(MODE_PRIVATE);
+        applicationData = getPreferences(MODE_PRIVATE);
 
         currentLocation = (TextView) findViewById(R.id.textView_currentLocation);
         reportTitle = (EditText) findViewById(R.id.editText_insertTitle);
@@ -303,10 +302,6 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                 Intent i = new Intent(this, Settings.class);
                 startActivity(i);
                 return true;
-            case R.id.about:
-                // TODO print
-                System.out.println("[DEBUG] about pressed");
-                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -350,7 +345,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                 // The image is retrieved
                 InputStream inputStream = getApplicationContext().getContentResolver().openInputStream(data.getData());
                 imageBitmap = BitmapFactory.decodeStream(inputStream);
-                // The image is compressed (it may be huge and take a long time to be sent over the network)
+                // The image is compressed (it may be huge and take a lot of time to be sent over the network)
                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
                 imageBitmap.compress(Bitmap.CompressFormat.JPEG, 10, outputStream);
                 // The String imageString, to be sent over the network, is initialized, and
@@ -552,8 +547,12 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
                         public void onResponse(String response) {
                             // response
                             System.out.println("[DEBUG] Response" + response);
-                            if((response.compareTo("0") == 0) || (response.compareTo("-1") == 0)){
+                            if(response.compareTo("0") == 0) {
                                 String message = "An error occurred while sending the report";
+                                Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+                                showProgressBar(false);
+                            } else if(response.compareTo("-1") == 0){
+                                String message = "Error: this report is a duplicate";
                                 Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
                                 showProgressBar(false);
                             } else {
@@ -595,26 +594,26 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
         }
 
         public void load(){
-            System.out.println("[DEBUG] load. dataUserId is " + preferences.getInt("dataUserId", 0) + ", " +
+            System.out.println("[DEBUG] load. dataUserId is " + applicationData.getInt("dataUserId", 0) + ", " +
                     "while userId is " + userId);
-            showProgressBar(true);
-            if((preferences.getInt("dataUserId", 0)) != userId){
-                String message = "There are not saved data";
+            if((applicationData.getInt("dataUserId", 0)) != userId){
+                String message = "There are no saved data";
                 Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
             } else {
-                reportTitle.setText(preferences.getString("reportTitle", ""));
-                category = preferences.getInt("category", 0);
+                showProgressBar(true);
+                reportTitle.setText(applicationData.getString("reportTitle", ""));
+                category = applicationData.getInt("category", 0);
                 reportCategory.setSelection(category);
-                reportDetails.setText(preferences.getString("reportDetails", ""));
-                ratingBar.setRating(preferences.getFloat("ratingBar", 0));
+                reportDetails.setText(applicationData.getString("reportDetails", ""));
+                ratingBar.setRating(applicationData.getFloat("ratingBar", 0));
 
-                String latitude = preferences.getString("lat", "");
-                String longitude = preferences.getString("lng", "");
+                String latitude = applicationData.getString("lat", "");
+                String longitude = applicationData.getString("lng", "");
                 if(!(latitude.isEmpty())){
                     latLng = new LatLng(Double.parseDouble(latitude), Double.parseDouble(longitude));
                     currentLocation.setText(stringFromLatLng(latLng));
                 }
-                imageString = preferences.getString("imageString", "");
+                imageString = applicationData.getString("imageString", "");
                 if(!(imageString.isEmpty())){
                     imageBitmap = StringToBitMap(imageString);
                     photoPreview.setImageBitmap(imageBitmap);
@@ -625,7 +624,7 @@ public class ReportAnIssue extends AppCompatActivity implements LocationListener
 
         public void save(){
             System.out.println("[DEBUG] save");
-            SharedPreferences.Editor editor = preferences.edit();
+            SharedPreferences.Editor editor = applicationData.edit();
             editor.putInt("dataUserId", userId);
             editor.putString("reportTitle", reportTitle.getText().toString());
             editor.putInt("category", category);

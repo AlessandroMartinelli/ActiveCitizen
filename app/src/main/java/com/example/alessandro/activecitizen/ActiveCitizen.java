@@ -44,7 +44,7 @@ public class ActiveCitizen extends AppCompatActivity {
     protected static int userId;                       // ID uniquely identifying one account
     protected static String username;                  // Account username
     protected static String password;                  // Account password
-    protected static SharedPreferences preferences;    // Preferences permanently storing account data
+    protected static SharedPreferences applicationData;    // Preferences permanently storing account data
     protected boolean fromConfigurationChange;  // Stores whether the activity was created after a configuration change
     protected static int logged;                          // Stores whether the user is logged
     protected static int progressBarShown;
@@ -137,8 +137,8 @@ public class ActiveCitizen extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_active_citizen);
 
-        preferences = getPreferences(MODE_PRIVATE);
-        //String themeId = preferences.getString("application_theme", "");
+        applicationData = getPreferences(MODE_PRIVATE);
+        //String themeId = applicationData.getString("application_theme", "");
         //System.out.println("[DEBUG] themeID is" + themeId);
 
         textView_activeCitizen_hello = (TextView) findViewById(R.id.textView_activeCitizen_hello);
@@ -148,8 +148,8 @@ public class ActiveCitizen extends AppCompatActivity {
         logged = 0;
 
         // Retrieves account informations from non-volatile memory
-        username = preferences.getString("username", "");
-        password = preferences.getString("password", "");
+        username = applicationData.getString("username", "");
+        password = applicationData.getString("password", "");
 
         // Checks if this is an application start or a device configuration change
         if (savedInstanceState != null) {
@@ -241,10 +241,6 @@ public class ActiveCitizen extends AppCompatActivity {
                 Intent i = new Intent(this, Settings.class);
                 startActivity(i);
                 return true;
-            case R.id.about:
-                // TODO print
-                System.out.println("[DEBUG] about pressed");
-                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -311,7 +307,7 @@ public class ActiveCitizen extends AppCompatActivity {
                             username = existingUsername;
                             password = existingPassword;
                             logged = 1;
-                            SharedPreferences.Editor editor = preferences.edit();
+                            SharedPreferences.Editor editor = applicationData.edit();
                             //editor.putInt("userid", userId);
                             editor.putString("username", username);
                             editor.putString("password", password);
@@ -386,7 +382,7 @@ public class ActiveCitizen extends AppCompatActivity {
                             password = newPassword;
                             textView_activeCitizen_hello.setText("Welcome, " + username);
                             button_logout.setVisibility(View.VISIBLE);
-                            SharedPreferences.Editor editor = preferences.edit();
+                            SharedPreferences.Editor editor = applicationData.edit();
                             //editor.putInt("userid", userId);
                             editor.putString("username", username);
                             editor.putString("password", password);
@@ -459,7 +455,7 @@ public class ActiveCitizen extends AppCompatActivity {
         password = "";
         button_logout.setVisibility(View.GONE);
         textView_activeCitizen_hello.setText("");
-        SharedPreferences.Editor editor = preferences.edit();
+        SharedPreferences.Editor editor = applicationData.edit();
         //editor.putInt("userid", 0);
         editor.putString("username", "");
         editor.putString("password", "");

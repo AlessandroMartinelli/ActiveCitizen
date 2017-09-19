@@ -18,8 +18,4 @@
         android:titleCondensed="Settings"
         android:title="Settings">
     </item>
-    <item android:id="@+id/about"
-        android:titleCondensed="About"
-        android:title="About">
-    </item>
 </menu>

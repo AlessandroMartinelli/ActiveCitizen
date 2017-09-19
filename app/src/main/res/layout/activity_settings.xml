@@ -2,8 +2,7 @@
 <PreferenceScreen
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_height="match_parent"
-    android:layout_width="match_parent"
-    >
+    android:layout_width="match_parent">
     <CheckBoxPreference
         android:key="confirm_report_exit"
         android:title="Confirm on exit new report"
@@ -17,4 +16,24 @@
         android:entries="@array/themes_array"
         android:entryValues="@array/themes_values_array"
         android:defaultValue="1" />
+    <PreferenceScreen
+        android:title="About"
+        android:layout_height="match_parent"
+        android:layout_width="match_parent" >
+        <Preference
+            android:selectable="false"
+            android:enabled="true"
+            android:key="author"
+            android:title="Author: Alessandro Martinelli" />
+        <Preference
+            android:selectable="false"
+            android:enabled="true"
+            android:key="version"
+            android:title="Version: 0.15" />
+        <Preference
+            android:selectable="false"
+            android:enabled="true"
+            android:key="Build date"
+            android:title="Built date: 2017-09-19" />
+    </PreferenceScreen>
 </PreferenceScreen>

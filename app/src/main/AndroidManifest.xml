@@ -32,7 +32,9 @@
             android:windowSoftInputMode="stateHidden">
         </activity>
         <activity
-            android:name=".BrowseMap">
+            android:name=".BrowseMap"
+            android:label="BrowseMap"
+            >
         </activity>
         <activity
             android:label="Settings"

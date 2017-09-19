@@ -404,10 +404,6 @@ public class BrowseMap extends AppCompatActivity implements OnMapReadyCallback, 
                 Intent i = new Intent(this, Settings.class);
                 startActivity(i);
                 return true;
-            case R.id.about:
-                // TODO print
-                System.out.println("[DEBUG] about pressed");
-                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
